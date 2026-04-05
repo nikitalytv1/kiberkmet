@@ -23,5 +23,5 @@ jobs:
           cd frontend
           npm install
           npm run lint
-          npm test
+          npm test -- --watchAll=false
           npm run build
