@@ -117,4 +117,8 @@ fun main() {
     //Za izpis uporabimo foreach in izpiši vsakega iteratorja v nadaljavanju moramo še geometry razbiti na manjše dele za pridobitev koordinatov
 
 
+    // Izpis 10 podatkov parcel
+    features.take(10).forEach {
+        println(it)
+    }
 }
