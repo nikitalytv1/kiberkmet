@@ -55,10 +55,39 @@ fun download(fileID: String, outputFile: File) {
         }
     }
 }
+
+fun extractCoordinates(geometry: Map<String, Any>): List<List<Double>> {
+    val type = geometry["type"] as? String ?: return emptyList()
+    val coords = geometry["coordinates"] ?: return emptyList()
+
+    return when (type) {
+        "Point" -> {
+            val point = coords as? List<*> ?: return emptyList()
+            listOf(point.filterIsInstance<Number>().map { it.toDouble() })
+        }
+        "Polygon" -> {
+            val rings = coords as? List<*> ?: return emptyList()
+            val outer = rings.firstOrNull() as? List<*> ?: return emptyList()
+            outer.filterIsInstance<List<*>>().map { point ->
+                point.filterIsInstance<Number>().map { it.toDouble() }
+            }
+        }
+        "MultiPolygon" -> {
+            val polygons = coords as? List<*> ?: return emptyList()
+            val firstPoly = polygons.firstOrNull() as? List<*> ?: return emptyList()
+            val outer = firstPoly.firstOrNull() as? List<*> ?: return emptyList()
+            outer.filterIsInstance<List<*>>().map { point ->
+                point.filterIsInstance<Number>().map { it.toDouble() }
+            }
+        }
+        else -> emptyList()
+    }
+}
+
 data class FeatureItem(
     val gerkPID: Long,
     val typeOfUse: String,
-    val geometry: Map<String, Any>
+    val coordinates: List<List<Double>>
 )
 
 fun main() {
@@ -97,7 +126,7 @@ fun main() {
                 }
             } else if (fieldName == "geometry") {
                 parser.nextToken()
-                geometry = mapper.readValue(parser, Map::class.java) as Map<String, Any>//serializacija
+                geometry = mapper.readValue(parser, Map::class.java) as Map<String, Any>
             } else {
                 parser.nextToken()
 
@@ -108,7 +137,7 @@ fun main() {
                 FeatureItem(
                     gerkPID = gerkPID,
                     typeOfUse = mapRaba(rabaID),
-                    geometry = geometry
+                    coordinates = extractCoordinates(geometry)
                 )
             )
         }
@@ -118,8 +147,15 @@ fun main() {
 
 
     // Izpis 10 podatkov parcel
-    features.take(10).forEach {
-        println(it)
+    features.take(10).forEach { feature ->
+        println("GERK_PID: ${feature.gerkPID} | Raba: ${feature.typeOfUse}")
+        println("  Stevilo tock: ${feature.coordinates.size}")
+        feature.coordinates.take(3).forEach { point ->
+            if (point.size >= 2) {
+                println("  lon=${point[0]}, lat=${point[1]}")
+            }
+        }
+        println()
     }
 
     println("\nVREMENSKA NAPOVED (Open-Meteo)")
