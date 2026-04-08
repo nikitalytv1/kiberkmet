@@ -121,4 +121,10 @@ fun main() {
     features.take(10).forEach {
         println(it)
     }
+
+    println("\nVREMENSKA NAPOVED (Open-Meteo)")
+    val weather = fetchWeatherData(latitude = 46.05, longitude = 14.51)
+    weather.forEach { w ->
+        println("${w.date} | Max: ${w.maxTemp}°C | Min: ${w.minTemp}°C")
+    }
 }
