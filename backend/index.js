@@ -7,7 +7,6 @@ import { PrismaPg } from "@prisma/adapter-pg";
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 export const prisma = new PrismaClient({ adapter });
 
-export const prisma = new PrismaClient();
 const app = express();
 app.use(cors({ origin: "http://localhost:3000" }));
 app.use(express.json());
