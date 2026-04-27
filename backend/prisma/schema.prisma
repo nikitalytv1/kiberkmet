@@ -11,15 +11,46 @@ model User {
   name      String
   email     String   @unique
   createdAt DateTime @default(now())
-  posts     Post[]
+  parcele   Parcela[]
 }
 
-model Post {
-  id        String   @id @default(uuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
-  createdAt DateTime @default(now())
+model Parcela {
+  id          String    @id @default(uuid())
+  gerk_pid    BigInt    @unique
+  typeOfUse   String    @db.VarChar(100)
+  coordinates Unsupported("geometry(Polygon, 4326)")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+
+  analize     Analiza[]
+  pridelki    Pridelek[]
+}
+
+model Analiza {
+  id                  String   @id @default(uuid())
+  lon                 Float
+  lat                 Float
+  physicalSoil        Json?    // bdod, clay, cfvo, sand, silt, wv0010, wv0033, wv1500
+  soilClassification  Json?    // WRB klasifikacija
+  derivedProperties   Json?    // ocd, ocs
+  fetchedAt           DateTime @default(now())
+
+  parcelaId           String
+  parcela             Parcela  @relation(fields: [parcelaId], references: [id])
+}
+
+model Pridelek {
+  id          String   @id @default(uuid())
+  naziv       String               // ime pridelka (pšenica, koruza...)
+  leto        Int                  // leto pridelave
+  povrsina    Float?               // površina v ha
+  kolicina    Float?               // količina v tonah
+  rawData     Json?                // originalni JSON iz stat.si
+  createdAt   DateTime @default(now())
+
+  parcelaId   String
+  parcela     Parcela  @relation(fields: [parcelaId], references: [id])
 }

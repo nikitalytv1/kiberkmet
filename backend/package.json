@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "dev": "nodemon index.js",
     "test": "jest",
     "lint": "eslint ."
   },
@@ -30,6 +31,7 @@
     "eslint-plugin-node": "^11.1.0",
     "globals": "^17.4.0",
     "jest": "^30.3.0",
+    "nodemon": "^3.1.14",
     "supertest": "^7.2.2",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
