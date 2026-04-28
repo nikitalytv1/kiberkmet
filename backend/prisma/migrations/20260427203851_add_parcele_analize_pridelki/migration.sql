@@ -18,7 +18,7 @@ CREATE TABLE "Parcela" (
     "coordinates" JSONB NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "userId" TEXT NOT NULL,
+    "userId" TEXT,
 
     CONSTRAINT "Parcela_pkey" PRIMARY KEY ("id")
 );

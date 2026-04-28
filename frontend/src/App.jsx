@@ -2,10 +2,26 @@ import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
+import ParceleTest from './ParceleTest'
 import './App.css'
 
 function App() {
   const [count, setCount] = useState(0)
+  const [showParceleTest, setShowParceleTest] = useState(false)
+
+  
+    return (
+      <div>
+        <button 
+          onClick={() => setShowParceleTest(false)} 
+          style={{ margin: '20px', padding: '10px 20px' }}
+        >
+          ← Back to Home
+        </button>
+        <ParceleTest />
+      </div>
+    )
+  
 
   return (
     <>
