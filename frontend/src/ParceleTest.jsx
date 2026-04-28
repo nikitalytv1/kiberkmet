@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 
 const API_URL = 'http://localhost:5000/api/parcele';
 
-// Raba values from Slovenian land use classification
 const RABA_OPTIONS = [
   { value: 1100, label: 'Njiva' },
   { value: 1160, label: 'Hmeljišče' },
@@ -30,13 +29,11 @@ const RABA_OPTIONS = [
   { value: 7000, label: 'Voda' }
 ];
 
-// Helper to get label from raba value
 const getRabaLabel = (value) => {
   const opt = RABA_OPTIONS.find(o => o.value === Number(value));
   return opt ? `${opt.value} - ${opt.label}` : value;
 };
 
-// Sample GeoJSON polygon (a simple square)
 const samplePolygon = {
   type: 'Polygon',
   coordinates: [[
@@ -53,15 +50,42 @@ function ParceleTest() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
+
   const [formData, setFormData] = useState({
     gerk_pid: '',
     typeOfUse: ''
   });
+
   const [updateData, setUpdateData] = useState({
     typeOfUse: ''
   });
 
-  // GET all
+  // INITIAL FETCH (fixed)
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchParcele = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        if (isMounted) setParcele(data);
+      } catch (err) {
+        if (isMounted) setError(err.message);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchParcele();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // reusable fetch
   const fetchParcele = async () => {
     setLoading(true);
     setError(null);
@@ -76,7 +100,6 @@ function ParceleTest() {
     }
   };
 
-  // GET by id
   const fetchParcela = async (id) => {
     setLoading(true);
     setError(null);
@@ -92,14 +115,15 @@ function ParceleTest() {
     }
   };
 
-  // POST
   const createParcela = async () => {
     if (!formData.gerk_pid || !formData.typeOfUse) {
-      setError('Fill all fields: gerk_pid, typeOfUse');
+      setError('Fill all fields');
       return;
     }
+
     setLoading(true);
     setError(null);
+
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
@@ -110,13 +134,14 @@ function ParceleTest() {
           coordinates: samplePolygon
         })
       });
+
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || 'Failed to create');
       }
-      const data = await res.json();
-      alert(`Created: ${JSON.stringify(data, null, 2)}`);
-      fetchParcele();
+
+      setFormData({ gerk_pid: '', typeOfUse: '' });
+      await fetchParcele();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -124,14 +149,15 @@ function ParceleTest() {
     }
   };
 
-  // PUT
   const updateParcela = async () => {
     if (!selectedId || !updateData.typeOfUse) {
-      setError('Select a parcela and enter typeOfUse');
+      setError('Select parcela + type');
       return;
     }
+
     setLoading(true);
     setError(null);
+
     try {
       const res = await fetch(`${API_URL}/${selectedId}`, {
         method: 'PUT',
@@ -141,13 +167,14 @@ function ParceleTest() {
           coordinates: samplePolygon
         })
       });
+
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || 'Failed to update');
       }
-      const data = await res.json();
-      alert(`Updated: ${JSON.stringify(data, null, 2)}`);
-      fetchParcele();
+
+      setUpdateData({ typeOfUse: '' });
+      await fetchParcele();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -155,141 +182,98 @@ function ParceleTest() {
     }
   };
 
-  // DELETE
   const deleteParcela = async (id) => {
-    if (!confirm('Delete this parcela?')) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API_URL}/${id}`, {
-        method: 'DELETE'
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to delete');
-      }
-      alert('Deleted successfully');
-      setSelectedId(null);
-      fetchParcele();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  console.log("DELETE CLICKED", id);
 
-  useEffect(() => {
-    fetchParcele();
-  }, []);
+  if (!window.confirm('Delete this parcela?')) {
+    console.log("USER CANCELLED");
+    return;
+  }
+
+  console.log("CONFIRMED");
+
+  setLoading(true);
+  setError(null);
+
+  try {
+    const res = await fetch(`${API_URL}/${id}`, {
+      method: 'DELETE'
+    });
+
+    console.log("RESPONSE STATUS:", res.status);
+
+    setSelectedId(null);
+    await fetchParcele();
+
+  } catch (err) {
+    console.error("DELETE ERROR:", err);
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+    <div style={{ padding: 20, maxWidth: 800, margin: '0 auto' }}>
       <h1>Parcele CRUD Test</h1>
-      
-      {error && (
-        <div style={{ background: '#fee', color: '#c00', padding: '10px', marginBottom: '10px', borderRadius: '4px' }}>
-          Error: {error}
-        </div>
-      )}
-      
+
+      {error && <div style={{ color: 'red' }}>{error}</div>}
       {loading && <p>Loading...</p>}
 
       {/* CREATE */}
-      <section style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ccc', borderRadius: '8px' }}>
-        <h3>Create (POST)</h3>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <input
-            type="text"
-            placeholder="gerk_pid (e.g. 12345678)"
-            value={formData.gerk_pid}
-            onChange={e => setFormData({ ...formData, gerk_pid: e.target.value })}
-            style={{ padding: '8px' }}
-          />
-          <select
-            value={formData.typeOfUse}
-            onChange={e => setFormData({ ...formData, typeOfUse: e.target.value })}
-            style={{ padding: '8px', minWidth: '200px' }}
-          >
-            <option value="">-- Izberi raba --</option>
-            {RABA_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>
-                {opt.value} - {opt.label}
-              </option>
-            ))}
-          </select>
-          <button onClick={createParcela} disabled={loading} style={{ padding: '8px 16px' }}>
-            Create
-          </button>
-        </div>
-      </section>
+      <h3>Create</h3>
+      <input
+        placeholder="gerk_pid"
+        value={formData.gerk_pid}
+        onChange={e => setFormData({ ...formData, gerk_pid: e.target.value })}
+      />
+      <select
+        value={formData.typeOfUse}
+        onChange={e => setFormData({ ...formData, typeOfUse: e.target.value })}
+      >
+        <option value="">Select raba</option>
+        {RABA_OPTIONS.map(opt => (
+          <option key={opt.value} value={opt.value}>
+            {opt.value} - {opt.label}
+          </option>
+        ))}
+      </select>
+      <button onClick={createParcela}>Create</button>
 
       {/* UPDATE */}
-      <section style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ccc', borderRadius: '8px' }}>
-        <h3>Update (PUT)</h3>
-        <p style={{ fontSize: '12px', color: '#666' }}>Select a parcela from the list below</p>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <select
-            value={updateData.typeOfUse}
-            onChange={e => setUpdateData({ ...updateData, typeOfUse: e.target.value })}
-            style={{ padding: '8px', minWidth: '200px' }}
-          >
-            <option value="">-- Izberi raba --</option>
-            {RABA_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>
-                {opt.value} - {opt.label}
-              </option>
-            ))}
-          </select>
-          <button onClick={updateParcela} disabled={loading || !selectedId} style={{ padding: '8px 16px' }}>
-            Update Selected
-          </button>
-        </div>
-      </section>
+      <h3>Update</h3>
+      <select
+        value={updateData.typeOfUse}
+        onChange={e => setUpdateData({ ...updateData, typeOfUse: e.target.value })}
+      >
+        <option value="">Select raba</option>
+        {RABA_OPTIONS.map(opt => (
+          <option key={opt.value} value={opt.value}>
+            {opt.value} - {opt.label}
+          </option>
+        ))}
+      </select>
+      <button onClick={updateParcela} disabled={!selectedId}>
+        Update Selected
+      </button>
 
       {/* LIST */}
-      <section style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h3>All Parcele (GET)</h3>
-          <button onClick={fetchParcele} disabled={loading}>Refresh</button>
+      <h3>Parcele</h3>
+      <button onClick={fetchParcele}>Refresh</button>
+
+      {parcele.map(p => (
+        <div key={p.id} style={{ borderBottom: '1px solid #ccc', padding: 8 }}>
+          <input
+            type="radio"
+            checked={selectedId === p.id}
+            onChange={() => setSelectedId(p.id)}
+          />
+          {p.gerk_pid} - {getRabaLabel(p.typeOfUse)}
+
+          <button onClick={() => fetchParcela(p.id)}>View</button>
+          <button onClick={() => deleteParcela(p.id)}>Delete</button>
         </div>
-        
-        {parcele.length === 0 ? (
-          <p>No parcele found</p>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: '#f5f5f5' }}>
-                <th style={{ padding: '8px', textAlign: 'left' }}>Select</th>
-                <th style={{ padding: '8px', textAlign: 'left' }}>ID</th>
-                <th style={{ padding: '8px', textAlign: 'left' }}>gerk_pid</th>
-                <th style={{ padding: '8px', textAlign: 'left' }}>typeOfUse</th>
-                <th style={{ padding: '8px', textAlign: 'left' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {parcele.map(p => (
-                <tr key={p.id} style={{ background: selectedId === p.id ? '#e0f0ff' : 'transparent' }}>
-                  <td style={{ padding: '8px' }}>
-                    <input
-                      type="radio"
-                      name="selected"
-                      checked={selectedId === p.id}
-                      onChange={() => setSelectedId(p.id)}
-                    />
-                  </td>
-                  <td style={{ padding: '8px', fontSize: '12px' }}>{p.id.slice(0, 8)}...</td>
-                  <td style={{ padding: '8px' }}>{p.gerk_pid}</td>
-                  <td style={{ padding: '8px' }}>{p.typeOfUse}</td>
-                  <td style={{ padding: '8px' }}>
-                    <button onClick={() => fetchParcela(p.id)} style={{ marginRight: '5px' }}>View</button>
-                    <button onClick={() => deleteParcela(p.id)} style={{ color: '#c00' }}>Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+      ))}
     </div>
   );
 }
