@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const API_URL = 'http://localhost:5000/api/parcele';
 
@@ -46,6 +47,7 @@ const samplePolygon = {
 };
 
 function ParceleTest() {
+    const navigate = useNavigate();
   const [parcele, setParcele] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -100,20 +102,6 @@ function ParceleTest() {
     }
   };
 
-  const fetchParcela = async (id) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API_URL}/${id}`);
-      if (!res.ok) throw new Error('Not found');
-      const data = await res.json();
-      alert(`Fetched: ${JSON.stringify(data, null, 2)}`);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const createParcela = async () => {
     if (!formData.gerk_pid || !formData.typeOfUse) {
@@ -270,7 +258,7 @@ function ParceleTest() {
           />
           {p.gerk_pid} - {getRabaLabel(p.typeOfUse)}
 
-          <button onClick={() => fetchParcela(p.id)}>View</button>
+          <button onClick={() => navigate(`/parcela/${p.id}`)}>View</button>
           <button onClick={() => deleteParcela(p.id)}>Delete</button>
         </div>
       ))}
