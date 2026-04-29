@@ -5,6 +5,7 @@ const { PrismaClient } = pkg;
 import { PrismaPg } from "@prisma/adapter-pg";
 import userRoutes from "./routes/users.js";
 import parceleRoutes from "./routes/parcele.js";
+import soilRoutes from "./routes/soil.js";
 
 BigInt.prototype.toJSON = function() {
   return this.toString();
@@ -18,7 +19,7 @@ app.use(cors({ origin: "http://localhost:3000" }));
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.json({ message: "API dela", routes: ["/api/health", "/api/users", "/api/parcele"] });
+  res.json({ message: "API dela", routes: ["/api/health", "/api/users", "/api/parcele", "/api/soil"] });
 });
 
 app.get("/api/health", async (req, res) => {
@@ -27,6 +28,7 @@ app.get("/api/health", async (req, res) => {
 
 app.use("/api/users", userRoutes);
 app.use("/api/parcele", parceleRoutes);
+app.use("/api/soil", soilRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
