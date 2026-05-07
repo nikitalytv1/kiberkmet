@@ -1,0 +1,139 @@
+/* ROOT WRAPPER */
+.test-page {
+  --text: #6b6375;
+  --text-h: #08060d;
+  --bg: #ffffff;
+  --border: #e5e4e7;
+  --code-bg: #f4f3ec;
+  --accent: #aa3bff;
+  --accent-bg: rgba(170, 59, 255, 0.1);
+  --accent-border: rgba(170, 59, 255, 0.5);
+  --shadow:
+    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+
+  --sans: system-ui, "Segoe UI", Roboto, sans-serif;
+  --heading: system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  font-family: var(--sans);
+  font-size: 18px;
+  line-height: 1.45;
+  letter-spacing: 0.18px;
+
+  color: var(--text);
+  background: var(--bg);
+
+  padding: 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* DARK MODE */
+@media (prefers-color-scheme: dark) {
+  .test-page {
+    --text: #9ca3af;
+    --text-h: #f3f4f6;
+    --bg: #16171d;
+    --border: #2e303a;
+    --code-bg: #1f2028;
+    --accent: #c084fc;
+    --accent-bg: rgba(192, 132, 252, 0.15);
+    --accent-border: rgba(192, 132, 252, 0.5);
+  }
+}
+
+/* HEADINGS */
+.test-page h1,
+.test-page h2,
+.test-page h3 {
+  font-family: var(--heading);
+  font-weight: 500;
+  color: var(--text-h);
+  margin: 16px 0;
+}
+
+.test-page h1 {
+  font-size: 36px;
+}
+
+.test-page h2 {
+  font-size: 24px;
+}
+
+.test-page h3 {
+  font-size: 18px;
+}
+
+/* TEXT */
+.test-page p {
+  margin: 8px 0;
+}
+
+/* INPUTS */
+.test-page input,
+.test-page select {
+  padding: 8px;
+  margin: 4px 8px 8px 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-h);
+}
+
+/* BUTTONS */
+.test-page button {
+  padding: 8px 12px;
+  margin: 4px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.test-page button:hover {
+  background: var(--accent);
+  color: white;
+}
+
+/* LIST ITEMS */
+.test-page .parcela-item {
+  border-bottom: 1px solid var(--border);
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* TABLES */
+.test-page table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.test-page td,
+.test-page th {
+  border: 1px solid var(--border);
+  padding: 8px;
+}
+
+/* CODE */
+.test-page code {
+  font-family: var(--mono);
+  background: var(--code-bg);
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+/* ALERT */
+.test-page .error {
+  color: red;
+  margin-bottom: 10px;
+}
+
+/* LOADING */
+.test-page .loading {
+  opacity: 0.7;
+}
