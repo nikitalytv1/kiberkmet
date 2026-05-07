@@ -22,17 +22,31 @@ router.post("/register", async (req, res) => {
     return res.status(400).json({ error: "Ime, email in geslo so obvezni." });
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    return res.status(409).json({ error: "Uporabnik s tem emailom že obstaja." });
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: "Neveljaven format e-pošte." });
   }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const user = await prisma.user.create({
-    data: { name, email, password: hashedPassword },
-  });
+  if (password.length < 8) {
+    return res.status(400).json({ error: "Geslo mora imeti vsaj 8 znakov." });
+  }
 
-  res.status(201).json({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt });
+  try {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return res.status(409).json({ error: "Uporabnik s tem emailom že obstaja." });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: { name, email, password: hashedPassword },
+    });
+
+    res.status(201).json({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Interna napaka strežnika." });
+  }
 })
 
 router.post("/login", async (req, res) => {
@@ -42,17 +56,22 @@ router.post("/login", async (req, res) => {
     return res.status(400).json({ error: "Email in geslo sta obvezna." });
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    return res.status(401).json({ error: "Napačen email ali geslo." });
-  }
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(401).json({ error: "Napačen email ali geslo." });
+    }
 
-  const valid = await bcrypt.compare(password, user.password);
-  if (!valid) {
-    return res.status(401).json({ error: "Napačen email ali geslo." });
-  }
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      return res.status(401).json({ error: "Napačen email ali geslo." });
+    }
 
-  res.json({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt });
+    res.json({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Interna napaka strežnika." });
+  }
 })
 
 router.post("/logout", (req, res) => {
