@@ -1,5 +1,31 @@
+import styles from './auth.module.css';
+import AuthLayout from './components/AuthLayout';
+import FormField from './components/FormField';
+
 function LoginView() {
-  return <h1>LoginView</h1>;
+  return (
+    <AuthLayout
+      leftHeading={<>Veseli smo,<br />da si spet tu.</>}
+      leftSubtext="Tvoja polja te čakajo. Preveri stanje tal, AI priporočila in podatke za vsako parcelo."
+      heading="Dobrodošli nazaj"
+      subheading="Prijavi se v svoj račun"
+      prompt="Še nimaš računa?"
+      promptLinkText="Ustvari račun"
+      promptLinkHref="/register"
+    >
+      <form className={styles.form} onSubmit={e => e.preventDefault()}>
+        <FormField id="email" label="E-pošta" type="email" placeholder="janez@primer.si" />
+
+        <FormField id="password" label="Geslo" type="password" placeholder="Vnesi geslo">
+          <a href="#" className={styles.forgotPassword}>Pozabljeno geslo?</a>
+        </FormField>
+
+        <button type="submit" className={styles.submitBtn}>
+          Prijavi se
+        </button>
+      </form>
+    </AuthLayout>
+  );
 }
 
 export default LoginView;

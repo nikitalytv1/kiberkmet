@@ -27,6 +27,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://user:password@db:5432/appdb
+      CHOKIDAR_USEPOLLING: "true"
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -42,9 +43,14 @@ services:
       DATABASE_URL: postgresql://user:password@db:5432/appdb
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      target: dev
     ports:
-      - "3000:80"
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       - backend
 
