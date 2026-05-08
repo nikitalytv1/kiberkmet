@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
+    kotlin("plugin.serialization") version "2.0.0"
 }
 
 kotlin {
@@ -12,6 +13,12 @@ kotlin {
     jvmToolchain(17)
     sourceSets {
         commonMain.dependencies {
+            implementation("io.ktor:ktor-client-core:2.3.12")
+            implementation("io.ktor:ktor-client-cio:2.3.12")
+            implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
+            implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.8.1")
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
             implementation(compose.materialIconsExtended)
             implementation("io.github.serpro69:kotlin-faker:1.16.1")
             implementation("com.fasterxml.jackson.core:jackson-core:2.15.2")
