@@ -17,8 +17,10 @@ model User {
 
 model Parcela {
   id          String    @id @default(uuid())
-  gerk_pid    BigInt    @unique
-  typeOfUse   String    @db.VarChar(100)
+  name        String?
+  color       String?
+  gerk_pid    BigInt?
+  typeOfUse   String    @default("Ostalo") @db.VarChar(100)
   coordinates Unsupported("geometry(Polygon, 4326)")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

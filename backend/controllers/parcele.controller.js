@@ -35,6 +35,8 @@ export async function getParcele(req, res) {
     const parcele = await prisma.$queryRaw`
       SELECT
         id,
+        name,
+        color,
         gerk_pid::text,
         "typeOfUse",
         ST_AsGeoJSON(coordinates)::json AS coordinates,
@@ -63,6 +65,8 @@ export async function getParcelaById(req, res) {
     const parcela = await prisma.$queryRaw`
       SELECT
         id,
+        name,
+        color,
         gerk_pid::text,
         "typeOfUse",
         ST_AsGeoJSON(coordinates)::json AS coordinates,
@@ -91,11 +95,11 @@ export async function getParcelaById(req, res) {
 
 // CREATE
 export async function createParcela(req, res) {
-  const { gerk_pid, typeOfUse, coordinates } = req.body;
+  const { name, color, coordinates } = req.body;
 
-  if (!gerk_pid || !typeOfUse || !coordinates) {
+  if (!name || !coordinates) {
     return res.status(400).json({
-      error: 'Missing required fields'
+      error: 'Manjkata name in coordinates'
     });
   }
 
@@ -106,15 +110,13 @@ export async function createParcela(req, res) {
   }
 
   try {
-    const gerkPidBigInt = toBigIntValue(gerk_pid);
-    const typeOfUseNumber = toNumberValue(typeOfUse);
-
     const geoJson = JSON.stringify(coordinates);
 
     const parcela = await prisma.$queryRaw`
       INSERT INTO "Parcela" (
         id,
-        gerk_pid,
+        name,
+        color,
         "typeOfUse",
         coordinates,
         "createdAt",
@@ -122,14 +124,17 @@ export async function createParcela(req, res) {
       )
       VALUES (
         gen_random_uuid(),
-        ${gerkPidBigInt},
-        ${typeOfUseNumber},
+        ${name},
+        ${color ?? null},
+        'Ostalo',
         ST_SetSRID(ST_GeomFromGeoJSON(${geoJson}), 4326),
         NOW(),
         NOW()
       )
       RETURNING
         id,
+        name,
+        color,
         gerk_pid::text,
         "typeOfUse",
         ST_AsGeoJSON(coordinates)::json AS coordinates,
