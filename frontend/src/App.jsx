@@ -3,7 +3,7 @@ import ParceleTest from "./views/test/ParceleTest";
 import ParcelPage from "./views/test/ParcelPage";
 import "./App.css";
 import LoginView from "./views/auth/LoginView";
-import RegistrationView from "./views/auth/RegistrationView";
+import RegistrationView from "./views/auth/RegistrationView"; 
 import AppLayout from "./layouts/AppLayout";
 import DashboardView from "./views/dashboard/DashboardView";
 import ParcelaView from "./views/dashboard/ParcelaView";
