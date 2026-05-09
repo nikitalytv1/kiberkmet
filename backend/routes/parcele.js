@@ -6,8 +6,8 @@ const router = Router();
 router.get("/", async (req, res) => {
   try {
     const parcele = await prisma.$queryRaw`
-      SELECT 
-        id, gerk_pid::text, "typeOfUse",
+      SELECT
+        id, name, color, gerk_pid::text, "typeOfUse",
         ST_AsGeoJSON(coordinates)::json AS coordinates,
         "createdAt", "userId"
       FROM "Parcela"
@@ -39,28 +39,25 @@ router.get("/:id", async (req, res) => {
 
 // POST
 router.post("/", async (req, res) => {
-  const { gerk_pid, typeOfUse, coordinates } = req.body;
-  
-  // Validate required fields
-  if (!gerk_pid || !typeOfUse || !coordinates) {
-    return res.status(400).json({ error: "Missing required fields: gerk_pid, typeOfUse, coordinates" });
+  const { name, color, coordinates } = req.body;
+
+  if (!name || !coordinates) {
+    return res.status(400).json({ error: "Manjkata name in coordinates" });
   }
-  
+
   try {
-    // Convert gerk_pid to BigInt (client may send as string/number)
-    const gerkPidBigInt = BigInt(gerk_pid);
-    
     const parcela = await prisma.$queryRaw`
-      INSERT INTO "Parcela" (id, gerk_pid, "typeOfUse", coordinates, "createdAt", "updatedAt")
+      INSERT INTO "Parcela" (id, name, color, "typeOfUse", coordinates, "createdAt", "updatedAt")
       VALUES (
         gen_random_uuid(),
-        ${gerkPidBigInt},
-        ${typeOfUse},
+        ${name},
+        ${color ?? null},
+        'Ostalo',
         ST_GeomFromGeoJSON(${JSON.stringify(coordinates)}),
         NOW(),
         NOW()
       )
-      RETURNING id, gerk_pid::text, "typeOfUse", ST_AsGeoJSON(coordinates)::json AS coordinates
+      RETURNING id, name, color, "typeOfUse", ST_AsGeoJSON(coordinates)::json AS coordinates
     `;
     res.status(201).json(parcela[0]);
   } catch (err) {
