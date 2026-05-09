@@ -10,6 +10,8 @@ import { MapInteraction }       from './components/MapInteraction';
 import { DrawHandler }          from './components/DrawHandler';
 import { NamePolygonModal }     from './components/NamePolygonModal';
 import { DeleteConfirmModal }   from './components/DeleteConfirmModal';
+import { ParcelsSidebar }       from './components/ParcelsSidebar';
+import { MapFlyTo }             from './components/MapFlyTo';
 
 function MapView() {
   const [activeTool, setActiveTool]       = useState('move');
@@ -22,6 +24,11 @@ function MapView() {
   const [pendingPolygon, setPendingPolygon] = useState<{ pts: Point[]; color: string } | null>(null);
   const [hoveredIdx, setHoveredIdx]       = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget]   = useState<number | null>(null);
+  const [selectedId, setSelectedId]       = useState<string | null>(null);
+
+  const handleColorChange = useCallback((id: string, color: string) => {
+    setPolygons(prev => prev.map(p => p.id === id ? { ...p, color } : p));
+  }, []);
 
   useEffect(() => {
     getParcele().then(parcele => {
@@ -112,6 +119,13 @@ function MapView() {
 
   return (
     <div className={styles.wrapper}>
+      <ParcelsSidebar
+        parcels={polygons}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
+        onColorChange={handleColorChange}
+      />
+
       <MapContainer
         center={MARIBOR_CENTER}
         zoom={15}
@@ -123,6 +137,7 @@ function MapView() {
 
         <CoordinatesDisplay />
         <MapInteraction active={activeTool === 'move'} />
+        <MapFlyTo selectedId={selectedId} polygons={polygons} />
 
         <div className={styles.toolbarGroup}>
           {choosingColor && (
