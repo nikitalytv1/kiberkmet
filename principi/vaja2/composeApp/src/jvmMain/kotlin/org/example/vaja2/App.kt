@@ -26,9 +26,13 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import parser.WeatherData
+import parser.fetchWeatherData
 import parser.mapRaba
 
 @Serializable
@@ -217,6 +221,9 @@ fun App() {
                 },
                 onUsersClick = {
                     selectedScreen = "users"
+                },
+                onScraperClick = {
+                    selectedScreen = "scraper"
                 }
             )
 
@@ -244,6 +251,19 @@ fun App() {
 
                     "users" -> UsersScreen()
 
+                    "scraper" -> ScraperSelectionScreen(
+                        onMeteoClick = { selectedScreen = "scraperMeteo" },
+                        onScraper2Click = { selectedScreen = "scraper2" }
+                    )
+
+                    "scraperMeteo" -> MeteoScraperScreen()
+
+                    "scraper2" -> Text(
+                        text = "Scraper 2 - Coming soon...",
+                        modifier = Modifier.padding(24.dp),
+                        fontSize = 24.sp
+                    )
+
                     else -> Text(
                         text = "Content area",
                         modifier = Modifier.padding(24.dp)
@@ -259,7 +279,8 @@ fun LeftMenu(
     onAddParcelClick: () -> Unit,
     onParcelsClick: () -> Unit,
     onAddUserClick: () -> Unit,
-    onUsersClick: () -> Unit
+    onUsersClick: () -> Unit,
+    onScraperClick: () -> Unit
 ) {
 
     Column(
@@ -280,7 +301,7 @@ fun LeftMenu(
 
         DividerLine()
 
-        MenuItem(Icons.Default.Share, "Scraper")
+        MenuItem(Icons.Default.Share, "Scraper", onClick = onScraperClick)
         MenuItem(Icons.Default.Build, "Generator")
 
         DividerLine()
@@ -1454,6 +1475,454 @@ fun UserDetails(
                         Text("Delete")
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun ScraperSelectionScreen(
+    onMeteoClick: () -> Unit,
+    onScraper2Click: () -> Unit
+) {
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+    ) {
+
+        Text(
+            "Scraper",
+            fontSize = 30.sp
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            "Select a data source:",
+            fontSize = 18.sp
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.5f)
+                .background(Color.White)
+                .clickable { onMeteoClick() }
+                .padding(20.dp)
+        ) {
+
+            Column {
+
+                Text(
+                    "Open-Meteo",
+                    fontSize = 22.sp
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    "Weather forecast data (temperature min/max)",
+                    fontSize = 15.sp,
+                    color = Color.Gray
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.5f)
+                .background(Color.White)
+                .clickable { onScraper2Click() }
+                .padding(20.dp)
+        ) {
+
+            Column {
+
+                Text(
+                    "Scraper 2",
+                    fontSize = 22.sp
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    "Scraper 2",
+                    fontSize = 15.sp,
+                    color = Color.Gray
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MeteoScraperScreen() {
+
+    var latitude by remember {
+        mutableStateOf("46.05")
+    }
+
+    var longitude by remember {
+        mutableStateOf("14.51")
+    }
+
+    var allData by remember {
+        mutableStateOf<List<WeatherData>>(emptyList())
+    }
+
+    var filteredData by remember {
+        mutableStateOf<List<WeatherData>>(emptyList())
+    }
+
+    var loading by remember {
+        mutableStateOf(false)
+    }
+
+    var error by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    var filterDateFrom by remember {
+        mutableStateOf("")
+    }
+
+    var filterDateTo by remember {
+        mutableStateOf("")
+    }
+
+    var filterMinTemp by remember {
+        mutableStateOf("")
+    }
+
+    var filterMaxTemp by remember {
+        mutableStateOf("")
+    }
+
+    var sortBy by remember {
+        mutableStateOf("date")
+    }
+
+    var sortAscending by remember {
+        mutableStateOf(true)
+    }
+
+    var sortDropdownExpanded by remember {
+        mutableStateOf(false)
+    }
+
+    val scope = rememberCoroutineScope()
+
+    fun applyFilterAndSort() {
+
+        var result = allData
+
+        if (filterDateFrom.isNotBlank()) {
+            result = result.filter { it.date >= filterDateFrom }
+        }
+
+        if (filterDateTo.isNotBlank()) {
+            result = result.filter { it.date <= filterDateTo }
+        }
+
+        val minTempFilter = filterMinTemp.toDoubleOrNull()
+        if (minTempFilter != null) {
+            result = result.filter { it.minTemp >= minTempFilter }
+        }
+
+        val maxTempFilter = filterMaxTemp.toDoubleOrNull()
+        if (maxTempFilter != null) {
+            result = result.filter { it.maxTemp <= maxTempFilter }
+        }
+
+        result = when (sortBy) {
+            "date" -> if (sortAscending) result.sortedBy { it.date } else result.sortedByDescending { it.date }
+            "maxTemp" -> if (sortAscending) result.sortedBy { it.maxTemp } else result.sortedByDescending { it.maxTemp }
+            "minTemp" -> if (sortAscending) result.sortedBy { it.minTemp } else result.sortedByDescending { it.minTemp }
+            else -> result
+        }
+
+        filteredData = result
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+
+        Text(
+            "Meteo Scraper",
+            fontSize = 30.sp
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            OutlinedTextField(
+                value = latitude,
+                onValueChange = { latitude = it },
+                label = { Text("Latitude") },
+                modifier = Modifier.width(160.dp)
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            OutlinedTextField(
+                value = longitude,
+                onValueChange = { longitude = it },
+                label = { Text("Longitude") },
+                modifier = Modifier.width(160.dp)
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Button(
+                enabled = !loading,
+                onClick = {
+
+                    loading = true
+                    error = null
+
+                    scope.launch {
+
+                        try {
+
+                            val lat = latitude.toDoubleOrNull()
+                                ?: throw IllegalArgumentException("Invalid latitude.")
+                            val lon = longitude.toDoubleOrNull()
+                                ?: throw IllegalArgumentException("Invalid longitude.")
+
+                            val data = withContext(Dispatchers.IO) {
+                                fetchWeatherData(lat, lon)
+                            }
+
+                            allData = data
+                            applyFilterAndSort()
+
+                        } catch (e: Exception) {
+                            error = e.message ?: "Error fetching weather data."
+                        } finally {
+                            loading = false
+                        }
+                    }
+                }
+            ) {
+                Text(if (loading) "Fetching..." else "Fetch Weather Data")
+            }
+        }
+
+        if (error != null) {
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Error: $error",
+                color = Color.Red
+            )
+        }
+
+        if (allData.isNotEmpty()) {
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                "Filters",
+                fontSize = 24.sp
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                OutlinedTextField(
+                    value = filterDateFrom,
+                    onValueChange = { filterDateFrom = it },
+                    label = { Text("Date from (YYYY-MM-DD)") },
+                    modifier = Modifier.width(200.dp)
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                OutlinedTextField(
+                    value = filterDateTo,
+                    onValueChange = { filterDateTo = it },
+                    label = { Text("Date to (YYYY-MM-DD)") },
+                    modifier = Modifier.width(200.dp)
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                OutlinedTextField(
+                    value = filterMinTemp,
+                    onValueChange = { filterMinTemp = it },
+                    label = { Text("Min temp >=") },
+                    modifier = Modifier.width(140.dp)
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                OutlinedTextField(
+                    value = filterMaxTemp,
+                    onValueChange = { filterMaxTemp = it },
+                    label = { Text("Max temp <=") },
+                    modifier = Modifier.width(140.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                ExposedDropdownMenuBox(
+                    expanded = sortDropdownExpanded,
+                    onExpandedChange = { sortDropdownExpanded = !sortDropdownExpanded }
+                ) {
+
+                    OutlinedTextField(
+                        value = when (sortBy) {
+                            "date" -> "Date"
+                            "maxTemp" -> "Max Temp"
+                            "minTemp" -> "Min Temp"
+                            else -> sortBy
+                        },
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Sort by") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = sortDropdownExpanded)
+                        },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .width(180.dp)
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = sortDropdownExpanded,
+                        onDismissRequest = { sortDropdownExpanded = false }
+                    ) {
+
+                        DropdownMenuItem(
+                            text = { Text("Date") },
+                            onClick = {
+                                sortBy = "date"
+                                sortDropdownExpanded = false
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("Max Temp") },
+                            onClick = {
+                                sortBy = "maxTemp"
+                                sortDropdownExpanded = false
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("Min Temp") },
+                            onClick = {
+                                sortBy = "minTemp"
+                                sortDropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Button(
+                    onClick = {
+                        sortAscending = !sortAscending
+                    }
+                ) {
+                    Text(if (sortAscending) "Ascending" else "Descending")
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Button(
+                    onClick = { applyFilterAndSort() }
+                ) {
+                    Text("Apply")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                "Results (${filteredData.size} / ${allData.size})",
+                fontSize = 24.sp
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFE0E0E0))
+                    .padding(12.dp)
+            ) {
+
+                Text(
+                    "Date",
+                    modifier = Modifier.weight(1f),
+                    fontSize = 16.sp
+                )
+
+                Text(
+                    "Max Temp (°C)",
+                    modifier = Modifier.weight(1f),
+                    fontSize = 16.sp
+                )
+
+                Text(
+                    "Min Temp (°C)",
+                    modifier = Modifier.weight(1f),
+                    fontSize = 16.sp
+                )
+            }
+
+            filteredData.forEach { weather ->
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+
+                    Text(
+                        weather.date,
+                        modifier = Modifier.weight(1f),
+                        fontSize = 15.sp
+                    )
+
+                    Text(
+                        "${weather.maxTemp}",
+                        modifier = Modifier.weight(1f),
+                        fontSize = 15.sp
+                    )
+
+                    Text(
+                        "${weather.minTemp}",
+                        modifier = Modifier.weight(1f),
+                        fontSize = 15.sp
+                    )
+                }
+
+                Divider(color = Color(0xFFE0E0E0))
             }
         }
     }
