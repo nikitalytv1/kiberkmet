@@ -1,5 +1,5 @@
 .wrapper {
-  position: relative;
+  display: flex;
   height: 100%;
   width: 100%;
 }
@@ -301,4 +301,165 @@
   font-family: monospace;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   pointer-events: none;
+}
+
+/* Parcels sidebar */
+.parcelsSidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: #ffffff;
+  border-right: 1px solid #f3f4f6;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 16px 16px;
+  overflow: hidden;
+}
+
+.sidebarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.sidebarTitle {
+  font-size: 10px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 0;
+}
+
+.sidebarCount {
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffffff;
+  background: #1A4D3A;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.sidebarSearch {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 8px 10px 8px 30px;
+  font-size: 13px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f9fafb;
+  color: #111827;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.searchInput::placeholder {
+  color: #9ca3af;
+}
+
+.searchInput:focus {
+  border-color: #9ca3af;
+  background: #ffffff;
+}
+
+.sidebarList {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebarItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.sidebarItem:hover {
+  background: #f9fafb;
+  border-color: #f3f4f6;
+}
+
+.sidebarItemActive {
+  background: #ffffff;
+  border-color: #d1d5db;
+}
+
+.sidebarColorBar {
+  width: 4px;
+  align-self: stretch;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.sidebarItemInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebarItemName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.sidebarItemArea {
+  font-size: 11px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.colorPickerWrap {
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.colorSwatch {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.colorInput {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.sidebarEmpty {
+  font-size: 13px;
+  color: #9ca3af;
+  padding: 8px 4px;
+  margin: 0;
 }
