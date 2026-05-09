@@ -1,0 +1,218 @@
+.page {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (min-width: 1024px) {
+  .statsGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.statCard {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f3f4f6;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 0 0 4px 0;
+}
+
+.statValue {
+  font-size: 26px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.statSub {
+  font-size: 11px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* Parcele grid */
+.parceleGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .parceleGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .parceleGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Parcela card */
+.parcelaCard {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #f3f4f6;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  overflow: hidden;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.parcelaCard:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border-color: #e5e7eb;
+}
+
+.colorBar {
+  height: 6px;
+  width: 100%;
+}
+
+.cardBody {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardName {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px 0;
+  line-height: 1.2;
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #d1d5db;
+  flex-shrink: 0;
+}
+
+/* Status badge */
+.statusBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.statusOk {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.statusWarn {
+  background: #fef9c3;
+  color: #ca8a04;
+}
+
+.statusBad {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Mini stats */
+.miniGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.miniCell {
+  background: #F2F4EF;
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.miniLabel {
+  font-size: 10px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 2px 0;
+}
+
+.miniValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+/* Card footer */
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardDate {
+  font-size: 11px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.chevron {
+  color: #d1d5db;
+  transition: color 0.15s;
+}
+
+.parcelaCard:hover .chevron {
+  color: #6b7280;
+}
+
+.empty {
+  font-size: 14px;
+  color: #9ca3af;
+  grid-column: 1 / -1;
+}
