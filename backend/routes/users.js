@@ -74,6 +74,51 @@ router.post("/login", async (req, res) => {
   }
 })
 
+router.put("/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, email, password } = req.body;
+
+  try {
+    const existing = await prisma.user.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: "Uporabnik ne obstaja." });
+    }
+
+    const data = {};
+    if (name) data.name = name;
+    if (email) data.email = email;
+    if (password) {
+      if (password.length < 8) {
+        return res.status(400).json({ error: "Geslo mora imeti vsaj 8 znakov." });
+      }
+      data.password = await bcrypt.hash(password, 10);
+    }
+
+    const user = await prisma.user.update({ where: { id }, data });
+    res.json({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Interna napaka strežnika." });
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const existing = await prisma.user.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: "Uporabnik ne obstaja." });
+    }
+
+    await prisma.user.delete({ where: { id } });
+    res.json({ message: "Uporabnik izbrisan." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Interna napaka strežnika." });
+  }
+});
+
 router.post("/logout", (req, res) => {
   res.json({ message: "Odjava uspešna." });
 })

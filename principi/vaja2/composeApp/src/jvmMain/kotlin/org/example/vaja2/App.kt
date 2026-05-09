@@ -23,6 +23,7 @@ import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.launch
@@ -123,6 +124,72 @@ object ParcelApi {
     }
 }
 
+@Serializable
+data class User(
+    val id: String,
+    val name: String,
+    val email: String,
+    val password: String? = null,
+    val createdAt: String? = null
+)
+
+@Serializable
+data class UserRequest(
+    val name: String,
+    val email: String,
+    val password: String
+)
+
+@Serializable
+data class UserUpdateRequest(
+    val name: String? = null,
+    val email: String? = null,
+    val password: String? = null
+)
+
+object UserApi {
+
+    private const val BASE_URL = "http://localhost:5001/api/users"
+
+    private val client = HttpClient(CIO) {
+        install(ContentNegotiation) {
+            json(Json { ignoreUnknownKeys = true })
+        }
+    }
+
+    suspend fun getAllUsers(): List<User> {
+        return client.get(BASE_URL).body()
+    }
+
+    suspend fun addUser(request: UserRequest): User {
+        val response = client.post("$BASE_URL/register") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+        if (response.status.value >= 400) {
+            val errorBody = response.body<Map<String, String>>()
+            throw Exception(errorBody["error"] ?: "Error creating user.")
+        }
+        return response.body()
+    }
+
+    suspend fun updateUser(id: String, request: UserUpdateRequest): User {
+        val response = client.put("$BASE_URL/$id") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+        if (response.status.value >= 400) {
+            val errorBody = response.body<Map<String, String>>()
+            throw Exception(errorBody["error"] ?: "Error updating user.")
+        }
+        return response.body()
+    }
+
+    suspend fun deleteUser(id: String) {
+        client.delete("$BASE_URL/$id")
+    }
+}
+
 @Composable
 fun App() {
 
@@ -144,6 +211,12 @@ fun App() {
                 },
                 onParcelsClick = {
                     selectedScreen = "parcels"
+                },
+                onAddUserClick = {
+                    selectedScreen = "addUser"
+                },
+                onUsersClick = {
+                    selectedScreen = "users"
                 }
             )
 
@@ -163,6 +236,14 @@ fun App() {
 
                     "parcels" -> ParcelsScreen()
 
+                    "addUser" -> AddUserScreen(
+                        onUserSaved = {
+                            selectedScreen = "users"
+                        }
+                    )
+
+                    "users" -> UsersScreen()
+
                     else -> Text(
                         text = "Content area",
                         modifier = Modifier.padding(24.dp)
@@ -176,7 +257,9 @@ fun App() {
 @Composable
 fun LeftMenu(
     onAddParcelClick: () -> Unit,
-    onParcelsClick: () -> Unit
+    onParcelsClick: () -> Unit,
+    onAddUserClick: () -> Unit,
+    onUsersClick: () -> Unit
 ) {
 
     Column(
@@ -192,8 +275,8 @@ fun LeftMenu(
 
         DividerLine()
 
-        MenuItem(Icons.Default.Add, "Add user")
-        MenuItem(Icons.Default.List, "Users")
+        MenuItem(Icons.Default.Add, "Add user", onClick = onAddUserClick)
+        MenuItem(Icons.Default.List, "Users", onClick = onUsersClick)
 
         DividerLine()
 
@@ -756,7 +839,7 @@ fun ParcelsList(
                             Spacer(modifier = Modifier.height(4.dp))
 
                             Text(
-                                text = "Type: ${mapRaba(parcel.typeOfUse.toInt())}",
+                                text = "Type: ${parcel.typeOfUse.toIntOrNull()?.let { mapRaba(it) } ?: parcel.typeOfUse}",
                                 fontSize = 16.sp
                             )
                         }
@@ -821,7 +904,7 @@ fun ParcelDetails(
                 )
 
                 Text(
-                    "${parcel.typeOfUse} - ${mapRaba(parcel.typeOfUse.toInt())}",
+                    "${parcel.typeOfUse} - ${parcel.typeOfUse.toIntOrNull()?.let { mapRaba(it) } ?: parcel.typeOfUse}",
                     fontSize = 16.sp
                 )
 
@@ -870,6 +953,506 @@ fun ParcelDetails(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AddUserScreen(
+    userToEdit: User? = null,
+    onUserSaved: () -> Unit
+) {
+
+    var name by remember {
+        mutableStateOf(userToEdit?.name ?: "")
+    }
+
+    var email by remember {
+        mutableStateOf(userToEdit?.email ?: "")
+    }
+
+    var password by remember {
+        mutableStateOf("")
+    }
+
+    var loading by remember {
+        mutableStateOf(false)
+    }
+
+    var error by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    val scope = rememberCoroutineScope()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+
+        Text(
+            text = if (userToEdit == null) "Add User" else "Update User",
+            fontSize = 30.sp
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        OutlinedTextField(
+            value = name,
+            onValueChange = {
+                name = it
+            },
+            label = {
+                Text("Name")
+            },
+            modifier = Modifier.fillMaxWidth(0.6f)
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = {
+                email = it
+            },
+            label = {
+                Text("Email")
+            },
+            modifier = Modifier.fillMaxWidth(0.6f)
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = password,
+            onValueChange = {
+                password = it
+            },
+            label = {
+                Text(if (userToEdit == null) "Password" else "New Password (leave empty to keep)")
+            },
+            modifier = Modifier.fillMaxWidth(0.6f)
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(
+            enabled = !loading,
+            onClick = {
+
+                loading = true
+                error = null
+
+                scope.launch {
+
+                    try {
+
+                        if (name.isBlank()) {
+                            throw IllegalArgumentException("Name is required.")
+                        }
+
+                        if (email.isBlank()) {
+                            throw IllegalArgumentException("Email is required.")
+                        }
+
+                        if (userToEdit == null) {
+
+                            if (password.length < 8) {
+                                throw IllegalArgumentException("Password must be at least 8 characters.")
+                            }
+
+                            UserApi.addUser(
+                                UserRequest(
+                                    name = name,
+                                    email = email,
+                                    password = password
+                                )
+                            )
+
+                        } else {
+
+                            UserApi.updateUser(
+                                userToEdit.id,
+                                UserUpdateRequest(
+                                    name = name,
+                                    email = email,
+                                    password = password.ifBlank { null }
+                                )
+                            )
+                        }
+
+                        onUserSaved()
+
+                    } catch (e: Exception) {
+
+                        error = e.message ?: "Error saving user."
+
+                    } finally {
+                        loading = false
+                    }
+                }
+            }
+        ) {
+
+            Text(
+                if (loading)
+                    "Saving..."
+                else if (userToEdit == null)
+                    "Add user"
+                else
+                    "Update user"
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (error != null) {
+
+            Text(
+                text = "Error: $error",
+                color = Color.Red
+            )
+        }
+    }
+}
+
+@Composable
+fun UsersScreen() {
+
+    var users by remember {
+        mutableStateOf<List<User>>(emptyList())
+    }
+
+    var loading by remember {
+        mutableStateOf(true)
+    }
+
+    var error by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    var selectedUser by remember {
+        mutableStateOf<User?>(null)
+    }
+
+    var editingUser by remember {
+        mutableStateOf<User?>(null)
+    }
+
+    val scope = rememberCoroutineScope()
+
+    fun loadUsers() {
+
+        scope.launch {
+
+            loading = true
+            error = null
+
+            try {
+                users = UserApi.getAllUsers()
+            } catch (e: Exception) {
+                error = e.message
+            } finally {
+                loading = false
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        loadUsers()
+    }
+
+    if (editingUser != null) {
+
+        AddUserScreen(
+            userToEdit = editingUser,
+            onUserSaved = {
+
+                editingUser = null
+                selectedUser = null
+                loadUsers()
+            }
+        )
+
+        return
+    }
+
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxSize()
+    ) {
+
+        val isSmallScreen = maxWidth < 900.dp
+
+        if (isSmallScreen) {
+
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+
+                UsersList(
+                    users = users,
+                    loading = loading,
+                    error = error,
+                    selectedUser = selectedUser,
+                    onUserClick = {
+                        selectedUser = it
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                )
+
+                UserDetails(
+                    user = selectedUser,
+                    onUpdateClick = {
+                        editingUser = it
+                    },
+                    onDeleteClick = { user ->
+
+                        scope.launch {
+
+                            try {
+
+                                UserApi.deleteUser(user.id)
+
+                                selectedUser = null
+                                loadUsers()
+
+                            } catch (e: Exception) {
+                                error = e.message
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 260.dp, max = 420.dp)
+                )
+            }
+
+        } else {
+
+            Row(
+                modifier = Modifier.fillMaxSize()
+            ) {
+
+                UsersList(
+                    users = users,
+                    loading = loading,
+                    error = error,
+                    selectedUser = selectedUser,
+                    onUserClick = {
+                        selectedUser = it
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                )
+
+                UserDetails(
+                    user = selectedUser,
+                    onUpdateClick = {
+                        editingUser = it
+                    },
+                    onDeleteClick = { user ->
+
+                        scope.launch {
+
+                            try {
+
+                                UserApi.deleteUser(user.id)
+
+                                selectedUser = null
+                                loadUsers()
+
+                            } catch (e: Exception) {
+                                error = e.message
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .widthIn(min = 320.dp, max = 460.dp)
+                        .fillMaxHeight()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun UsersList(
+    users: List<User>,
+    loading: Boolean,
+    error: String?,
+    selectedUser: User?,
+    onUserClick: (User) -> Unit,
+    modifier: Modifier = Modifier
+) {
+
+    Column(
+        modifier = modifier
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+
+        Text(
+            "Users",
+            fontSize = 30.sp
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        when {
+
+            loading -> Text("Loading...")
+
+            error != null -> Text(
+                text = "Error: $error",
+                color = Color.Red
+            )
+
+            users.isEmpty() -> Text("No users found.")
+
+            else -> {
+
+                users.forEach { user ->
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
+                            .background(
+                                if (selectedUser?.id == user.id)
+                                    Color(0xFFDCEEFF)
+                                else
+                                    Color.White
+                            )
+                            .clickable {
+                                onUserClick(user)
+                            }
+                            .padding(16.dp)
+                    ) {
+
+                        Column {
+
+                            Text(
+                                text = user.name,
+                                fontSize = 20.sp
+                            )
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Text(
+                                text = user.email,
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun UserDetails(
+    user: User?,
+    onUpdateClick: (User) -> Unit,
+    onDeleteClick: (User) -> Unit,
+    modifier: Modifier = Modifier
+) {
+
+    Box(
+        modifier = modifier
+            .background(Color.White)
+            .padding(24.dp)
+    ) {
+
+        if (user == null) {
+
+            Text(
+                "Select a user",
+                fontSize = 24.sp
+            )
+
+        } else {
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
+
+                Text(
+                    "User Details",
+                    fontSize = 30.sp
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    "Name:",
+                    fontSize = 18.sp
+                )
+
+                Text(
+                    user.name,
+                    fontSize = 16.sp
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    "Email:",
+                    fontSize = 18.sp
+                )
+
+                Text(
+                    user.email,
+                    fontSize = 16.sp
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (user.createdAt != null) {
+
+                    Text(
+                        "Created At:",
+                        fontSize = 18.sp
+                    )
+
+                    Text(
+                        user.createdAt,
+                        fontSize = 16.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row {
+
+                    Button(
+                        onClick = {
+                            onUpdateClick(user)
+                        }
+                    ) {
+                        Text("Update")
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Button(
+                        onClick = {
+                            onDeleteClick(user)
+                        }
+                    ) {
+                        Text("Delete")
+                    }
                 }
             }
         }
