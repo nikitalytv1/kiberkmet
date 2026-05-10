@@ -6,6 +6,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import userRoutes from "./routes/users.js";
 import parceleRoutes from './routes/parcele.routes.js';
 import soilRoutes from "./routes/soil.js";
+import statisticsRoutes from "./routes/statistics.js";
 
 BigInt.prototype.toJSON = function() {
   return this.toString();
@@ -29,6 +30,7 @@ app.get("/api/health", async (req, res) => {
 app.use("/api/users", userRoutes);
 app.use('/api/parcele', parceleRoutes);
 app.use("/api/soil", soilRoutes);
+app.use("/api/statistics", statisticsRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

@@ -357,6 +357,54 @@
   margin: 8px 0 0;
 }
 
+.chartGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 1024px) {
+  .chartGrid {
+    grid-template-columns: minmax(280px, 0.8fr) minmax(420px, 1.2fr);
+  }
+}
+
+.chartPanel {
+  background: #ffffff;
+  border: 1px solid #edf0ea;
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+  padding: 18px 22px;
+}
+
+.chartHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.chartTitle {
+  color: #1f2937;
+  font-size: 15px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.chartSub {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 4px 0 0;
+}
+
+.chartBox {
+  height: 280px;
+  min-width: 0;
+  position: relative;
+}
+
 .recommendPanel {
   overflow: hidden;
 }
