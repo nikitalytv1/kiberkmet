@@ -472,3 +472,152 @@
   font-weight: 600;
   margin: 8px 0 0;
 }
+
+/* Weather card */
+.detailLayout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 1100px) {
+  .detailLayout {
+    grid-template-columns: 1fr 320px;
+  }
+}
+
+.weatherPanel {
+  background: #ffffff;
+  border: 1px solid #edf0ea;
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+  padding: 20px;
+  height: fit-content;
+}
+
+.weatherHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.weatherTitle {
+  font-size: 15px;
+  font-weight: 800;
+  color: #1f2937;
+  margin: 0;
+}
+
+.weatherSource {
+  color: #94a3b8;
+  font-size: 11px;
+  margin: 0 0 16px;
+}
+
+.weatherCurrent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.weatherCurrentTemp {
+  font-size: 32px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1;
+}
+
+.weatherCurrentMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.weatherCurrentDesc {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+}
+
+.weatherCurrentRain {
+  font-size: 12px;
+  color: #0ea5e9;
+  font-weight: 600;
+  margin: 0;
+}
+
+.weatherDayRow {
+  display: grid;
+  grid-template-columns: 42px 20px 1fr 36px 32px 32px;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 0;
+}
+
+.weatherDayRow + .weatherDayRow {
+  border-top: 1px solid #f8fafc;
+}
+
+.weatherDayName {
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+  margin: 0;
+}
+
+.weatherDayIcon {
+  font-size: 14px;
+  text-align: center;
+}
+
+.weatherBar {
+  height: 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  position: relative;
+  overflow: hidden;
+}
+
+.weatherBarFill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0ea5e9, #f97316);
+}
+
+.weatherDayRain {
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: right;
+  margin: 0;
+}
+
+.weatherDayMax {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1f2937;
+  text-align: right;
+  margin: 0;
+}
+
+.weatherDayMin {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-align: right;
+  margin: 0;
+}
+
+.weatherLoading {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 12px 0 0;
+}

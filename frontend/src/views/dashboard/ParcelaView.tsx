@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Bot, CalendarDays, Droplets, FlaskConical, Leaf, Sprout } from 'lucide-react';
+import { ArrowLeft, Bot, CalendarDays, CloudRain, Droplets, FlaskConical, Leaf, Sprout } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { analyzeParcela, getParcela, ParcelaAnalysis } from '../../api/parcele';
 import { Point } from '../map/types';
@@ -34,6 +34,68 @@ type SoilLayer = {
     };
   }[];
 };
+
+type WeatherDay = {
+  date: string;
+  dayName: string;
+  maxTemp: number;
+  minTemp: number;
+  precipitation: number;
+  weatherCode: number;
+};
+
+const DAY_NAMES_SL = ['Ned', 'Pon', 'Tor', 'Sre', 'Čet', 'Pet', 'Sob'];
+
+function weatherIcon(code: number) {
+  if (code === 0 || code === 1) return '☀️';
+  if (code === 2) return '⛅';
+  if (code === 3) return '☁️';
+  if (code >= 51 && code <= 67) return '🌧️';
+  if (code >= 71 && code <= 77) return '🌨️';
+  if (code >= 80 && code <= 82) return '🌦️';
+  if (code >= 95) return '⛈️';
+  return '☁️';
+}
+
+function weatherDescription(code: number) {
+  if (code === 0) return 'Jasno';
+  if (code === 1) return 'Pretežno jasno';
+  if (code === 2) return 'Delno oblačno';
+  if (code === 3) return 'Oblačno';
+  if (code >= 51 && code <= 55) return 'Rosenje';
+  if (code >= 56 && code <= 57) return 'Ledeno rosenje';
+  if (code >= 61 && code <= 65) return 'Dež';
+  if (code >= 66 && code <= 67) return 'Leden dež';
+  if (code >= 71 && code <= 75) return 'Sneženje';
+  if (code >= 80 && code <= 82) return 'Plohe';
+  if (code >= 95) return 'Nevihta';
+  return 'Oblačno';
+}
+
+async function fetchWeather(lat: number, lon: number): Promise<WeatherDay[]> {
+  const url =
+    `https://api.open-meteo.com/v1/forecast` +
+    `?latitude=${lat}` +
+    `&longitude=${lon}` +
+    `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code` +
+    `&timezone=Europe/Ljubljana`;
+
+  const res = await fetch(url);
+  const json = await res.json();
+  const daily = json.daily;
+
+  return (daily.time as string[]).map((date: string, i: number) => {
+    const d = new Date(date + 'T00:00:00');
+    return {
+      date,
+      dayName: DAY_NAMES_SL[d.getDay()],
+      maxTemp: daily.temperature_2m_max[i],
+      minTemp: daily.temperature_2m_min[i],
+      precipitation: daily.precipitation_probability_max?.[i] ?? 0,
+      weatherCode: daily.weather_code[i],
+    };
+  });
+}
 
 const SOIL_EMPTY: SoilValues = {
   ph: null,
@@ -213,6 +275,9 @@ function ParcelaView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [weather, setWeather] = useState<WeatherDay[]>([]);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+
   const center = useMemo(() => (parcela ? getCenter(parcela.pts) : null), [parcela]);
   const soil = useMemo(() => getSoilValuesFromAnalysis(analysis), [analysis]);
   const cropScores = useMemo(() => getCropScores(soil), [soil]);
@@ -273,6 +338,28 @@ function ParcelaView() {
     };
   }, [id, center, parcela]);
 
+  useEffect(() => {
+    if (!center) return;
+
+    let active = true;
+    setWeatherLoading(true);
+
+    fetchWeather(center[0], center[1])
+      .then(data => {
+        if (!active) return;
+        setWeather(data);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!active) return;
+        setWeatherLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [center]);
+
   const soilCards = [
     { label: 'pH tal', value: formatNumber(soil.ph, 1), sub: 'optimalno 6.0-7.5', icon: FlaskConical, ok: soil.ph == null || (soil.ph >= 6 && soil.ph <= 7.5) },
     { label: 'CEC', value: formatNumber(soil.cec, 1), sub: 'cmol(c)/kg', icon: FlaskConical, ok: true },
@@ -313,57 +400,121 @@ function ParcelaView() {
         </div>
       </div>
 
-      <section className={styles.analysisPanel}>
-        {soilLoading && <p className={styles.panelNotice}>Nalagam SoilGrids vrednosti ...</p>}
-        {soilError && <p className={styles.panelNotice}>{soilError}</p>}
-        <div className={styles.soilGrid}>
-          {soilCards.map(({ label, value, sub, icon: Icon, ok }) => (
-            <div key={label} className={styles.soilCard}>
-              <div className={styles.soilCardHeader}>
-                <span className={styles.soilLabel}>{label}</span>
-                <span className={ok ? styles.statusDotOk : styles.statusDotWarn} />
-              </div>
-              <div className={styles.soilValueRow}>
-                <Icon size={18} />
-                <p className={styles.soilValue}>{value}</p>
-              </div>
-              <p className={styles.soilSub}>{sub}</p>
+      <div className={styles.detailLayout}>
+        <div>
+          <section className={styles.analysisPanel}>
+            {soilLoading && <p className={styles.panelNotice}>Nalagam SoilGrids vrednosti ...</p>}
+            {soilError && <p className={styles.panelNotice}>{soilError}</p>}
+            <div className={styles.soilGrid}>
+              {soilCards.map(({ label, value, sub, icon: Icon, ok }) => (
+                <div key={label} className={styles.soilCard}>
+                  <div className={styles.soilCardHeader}>
+                    <span className={styles.soilLabel}>{label}</span>
+                    <span className={ok ? styles.statusDotOk : styles.statusDotWarn} />
+                  </div>
+                  <div className={styles.soilValueRow}>
+                    <Icon size={18} />
+                    <p className={styles.soilValue}>{value}</p>
+                  </div>
+                  <p className={styles.soilSub}>{sub}</p>
+                </div>
+              ))}
             </div>
-          ))}
+          </section>
+
+          <section className={styles.recommendPanel} style={{ marginTop: 24 }}>
+            <div className={styles.recommendHeader}>
+              <div>
+                <p className={styles.recommendTitle}><Bot size={17} /> AI priporočila — Kaj saditi?</p>
+                <p className={styles.recommendSub}>Glede na pH, teksturo, dušik in organski ogljik</p>
+              </div>
+              <span className={styles.modelBadge}>SoilGrids</span>
+            </div>
+
+            <div className={styles.compatibilityList}>
+              {cropScores.map(crop => (
+                <div key={crop.name} className={styles.compatibilityRow}>
+                  <div className={styles.cropIcon}>{crop.icon}</div>
+                  <div className={styles.compatibilityBody}>
+                    <div className={styles.compatibilityTop}>
+                      <p className={styles.cropName}>{crop.name}</p>
+                      <span className={`${styles.compatibilityBadge} ${qualityClass(crop.score)}`}>{crop.score}%</span>
+                    </div>
+                    <div className={styles.compatibilityTrack}>
+                      <div
+                        className={`${styles.compatibilityFill} ${qualityClass(crop.score)}`}
+                        style={{ width: `${crop.score}%` }}
+                      />
+                    </div>
+                    <p className={styles.cropMeta}><CalendarDays size={13} /> {crop.season} · {crop.yield}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
 
-      </section>
-
-      <section className={styles.recommendPanel}>
-        <div className={styles.recommendHeader}>
-          <div>
-            <p className={styles.recommendTitle}><Bot size={17} /> AI priporočila — Kaj saditi?</p>
-            <p className={styles.recommendSub}>Glede na pH, teksturo, dušik in organski ogljik</p>
+        <div className={styles.weatherPanel}>
+          <div className={styles.weatherHeader}>
+            <p className={styles.weatherTitle}>Vreme</p>
           </div>
-          <span className={styles.modelBadge}>SoilGrids</span>
-        </div>
+          <p className={styles.weatherSource}>OpenMeteo · Včeraj–7 dni</p>
+          <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: '0 0 16px' }} />
 
-        <div className={styles.compatibilityList}>
-          {cropScores.map(crop => (
-            <div key={crop.name} className={styles.compatibilityRow}>
-              <div className={styles.cropIcon}>{crop.icon}</div>
-              <div className={styles.compatibilityBody}>
-                <div className={styles.compatibilityTop}>
-                  <p className={styles.cropName}>{crop.name}</p>
-                  <span className={`${styles.compatibilityBadge} ${qualityClass(crop.score)}`}>{crop.score}%</span>
+          {weatherLoading && <p className={styles.weatherLoading}>Nalagam vremensko napoved ...</p>}
+
+          {weather.length > 0 && (
+            <>
+              <div className={styles.weatherCurrent}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+                  <span style={{ fontSize: 28 }}>{weatherIcon(weather[0].weatherCode)}</span>
+                  <div>
+                    <p className={styles.weatherCurrentTemp}>{Math.round(weather[0].maxTemp)}°C</p>
+                    <p className={styles.weatherCurrentDesc}>{weatherDescription(weather[0].weatherCode)} · Danes</p>
+                  </div>
                 </div>
-                <div className={styles.compatibilityTrack}>
-                  <div
-                    className={`${styles.compatibilityFill} ${qualityClass(crop.score)}`}
-                    style={{ width: `${crop.score}%` }}
-                  />
+                <div style={{ textAlign: 'right' }}>
+                  <p className={styles.weatherCurrentRain}>
+                    <Droplets size={14} style={{ marginRight: 2, verticalAlign: -2 }} />
+                    {weather[0].precipitation}%
+                  </p>
+                  <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>dežja</p>
                 </div>
-                <p className={styles.cropMeta}><CalendarDays size={13} /> {crop.season} · {crop.yield}</p>
               </div>
-            </div>
-          ))}
+
+              {weather.map((day, i) => {
+                const pct = day.precipitation;
+                const alpha = pct <= 0 ? 0 : Math.min(0.15 + (pct / 100) * 0.85, 1);
+                const barColor = pct <= 0
+                  ? '#e2e8f0'
+                  : `rgba(59, 130, 246, ${alpha})`;
+
+                const dayLabel = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : day.dayName;
+
+                return (
+                  <div key={day.date} className={styles.weatherDayRow}>
+                    <p className={styles.weatherDayName}>{dayLabel}</p>
+                    <span className={styles.weatherDayIcon}>{weatherIcon(day.weatherCode)}</span>
+                    <div className={styles.weatherBar}>
+                      <div
+                        className={styles.weatherBarFill}
+                        style={{
+                          left: 0,
+                          width: `${Math.max(pct, 2)}%`,
+                          background: barColor,
+                        }}
+                      />
+                    </div>
+                    <p className={styles.weatherDayRain}>{pct}%</p>
+                    <p className={styles.weatherDayMax}>{Math.round(day.maxTemp)}°</p>
+                    <p className={styles.weatherDayMin}>{Math.round(day.minTemp)}°</p>
+                  </div>
+                );
+              })}
+            </>
+          )}
         </div>
-      </section>
+      </div>
 
       {error && <p className={styles.empty}>{error}</p>}
     </div>
