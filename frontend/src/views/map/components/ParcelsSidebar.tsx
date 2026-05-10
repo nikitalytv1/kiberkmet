@@ -17,8 +17,8 @@ export function ParcelsSidebar({
   const [search, setSearch] = useState('');
 
   const filtered = parcels.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  (p.name ?? '').toLowerCase().includes(search.toLowerCase())
+);
 
   return (
     <div className={styles.parcelsSidebar}>
@@ -47,7 +47,7 @@ export function ParcelsSidebar({
             <div className={styles.sidebarColorBar} style={{ backgroundColor: p.color }} />
 
             <div className={styles.sidebarItemInfo}>
-              <p className={styles.sidebarItemName}>{p.name}</p>
+            <p className={styles.sidebarItemName}>{p.name ?? ''}</p>
               <p className={styles.sidebarItemArea}>{(p as any).area ?? '—'}</p>
             </div>
 

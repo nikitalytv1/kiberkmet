@@ -9,6 +9,8 @@ export interface ParcelaItem {
   ph?: number | null;
   vlaga?: number | null;
   tip_tal?: string | null;
+  status?: 'ok' | 'warn' | 'bad';
+  statusLabel?: string;
 }
 
 export function ParcelaCard({ parcela, onClick }: { parcela: ParcelaItem; onClick: () => void }) {
@@ -19,11 +21,17 @@ export function ParcelaCard({ parcela, onClick }: { parcela: ParcelaItem; onClic
       <div className={styles.cardBody}>
         <div className={styles.cardHeader}>
           <p className={styles.cardName}>{parcela.name}</p>
-          <div className={styles.cardMeta}>
-            <span>{parcela.area ?? dash}</span>
-            <span className={styles.dot} />
-            <span>{parcela.kultura ?? dash}</span>
-          </div>
+          {parcela.statusLabel ? (
+            <span className={`${styles.statusBadge} ${parcela.status === 'bad' ? styles.statusBad : parcela.status === 'warn' ? styles.statusWarn : styles.statusOk}`}>
+              {parcela.statusLabel}
+            </span>
+          ) : null}
+        </div>
+
+        <div className={styles.cardMeta}>
+          <span>{parcela.area ?? dash}</span>
+          <span className={styles.dot} />
+          <span>{parcela.kultura ?? dash}</span>
         </div>
 
         <div className={styles.miniGrid}>
