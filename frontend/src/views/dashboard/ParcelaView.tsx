@@ -1,9 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Bot, CalendarDays, Droplets, FlaskConical, Leaf, Sprout } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
+import {
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Legend,
+  LinearScale,
+  Tooltip,
+} from 'chart.js';
+import { Bar, Pie } from 'react-chartjs-2';
 import { analyzeParcela, getParcela, ParcelaAnalysis } from '../../api/parcele';
+import { getRegionalTopCrops, TopCropsResponse } from '../../api/statistics';
 import { Point } from '../map/types';
 import styles from './dashboard.module.css';
+
+ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 type ParcelaDetails = {
   id: string;
@@ -210,12 +223,107 @@ function ParcelaView() {
   const [analysis, setAnalysis] = useState<ParcelaAnalysis | null>(null);
   const [soilLoading, setSoilLoading] = useState(false);
   const [soilError, setSoilError] = useState<string | null>(null);
+  const [topCrops, setTopCrops] = useState<TopCropsResponse | null>(null);
+  const [topCropsError, setTopCropsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const center = useMemo(() => (parcela ? getCenter(parcela.pts) : null), [parcela]);
   const soil = useMemo(() => getSoilValuesFromAnalysis(analysis), [analysis]);
   const cropScores = useMemo(() => getCropScores(soil), [soil]);
+
+  const soilComposition = useMemo(() => [
+    { label: 'Pesek', value: soil.sand, color: '#d6a85b' },
+    { label: 'Melj', value: soil.silt, color: '#8fb8a8' },
+    { label: 'Glina', value: soil.clay, color: '#7c6f64' },
+  ].filter(item => item.value != null && item.value > 0), [soil]);
+
+  const soilChartData = useMemo(() => ({
+    labels: soilComposition.map(item => item.label),
+    datasets: [
+      {
+        data: soilComposition.map(item => item.value),
+        backgroundColor: soilComposition.map(item => item.color),
+        borderColor: '#ffffff',
+        borderWidth: 3,
+      },
+    ],
+  }), [soilComposition]);
+
+  const cropChartData = useMemo(() => ({
+    labels: topCrops?.crops.map(crop => crop.name) ?? [],
+    datasets: [
+      {
+        label: `Pridelano (${topCrops?.unit ?? 't'})`,
+        data: topCrops?.crops.map(crop => crop.value) ?? [],
+        backgroundColor: '#0f6b4f',
+        borderRadius: 6,
+        maxBarThickness: 34,
+      },
+    ],
+  }), [topCrops]);
+
+  const chartOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom' as const,
+        labels: {
+          boxWidth: 10,
+          color: '#64748b',
+          font: {
+            size: 11,
+            weight: 700,
+          },
+        },
+      },
+      tooltip: {
+        callbacks: {
+          label: (ctx: { label?: string; parsed: number }) => `${ctx.label}: ${formatNumber(ctx.parsed, 1)}`,
+        },
+      },
+    },
+  }), []);
+
+  const barOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: 'y' as const,
+    scales: {
+      x: {
+        grid: {
+          color: '#edf2f0',
+        },
+        ticks: {
+          color: '#64748b',
+        },
+      },
+      y: {
+        grid: {
+          display: false,
+        },
+        ticks: {
+          color: '#334155',
+          font: {
+            size: 11,
+            weight: 700,
+          },
+        },
+      },
+    },
+    plugins: {
+      legend: {
+        display: false,
+      },
+      tooltip: {
+        callbacks: {
+          label: (ctx: { parsed: { x: number } }) => `${formatNumber(ctx.parsed.x, 0)} ${topCrops?.unit ?? 't'}`,
+        },
+      },
+    },
+  }), [topCrops?.unit]);
+
   useEffect(() => {
     if (!id) return;
 
@@ -272,6 +380,27 @@ function ParcelaView() {
       active = false;
     };
   }, [id, center, parcela]);
+
+  useEffect(() => {
+    if (!analysis) return;
+
+    let active = true;
+    setTopCropsError(null);
+
+    getRegionalTopCrops(analysis.lon)
+      .then(data => {
+        if (!active) return;
+        setTopCrops(data);
+      })
+      .catch(err => {
+        if (!active) return;
+        setTopCropsError(err.message);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [analysis]);
 
   const soilCards = [
     { label: 'pH tal', value: formatNumber(soil.ph, 1), sub: 'optimalno 6.0-7.5', icon: FlaskConical, ok: soil.ph == null || (soil.ph >= 6 && soil.ph <= 7.5) },
@@ -332,6 +461,42 @@ function ParcelaView() {
           ))}
         </div>
 
+      </section>
+
+      <section className={styles.chartGrid}>
+        <div className={styles.chartPanel}>
+          <div className={styles.chartHeader}>
+            <div>
+              <p className={styles.chartTitle}>Sestava tal</p>
+              <p className={styles.chartSub}>Pesek, melj in glina po SoilGrids</p>
+            </div>
+          </div>
+          <div className={styles.chartBox}>
+            {soilComposition.length > 0 ? (
+              <Pie data={soilChartData} options={chartOptions} />
+            ) : (
+              <p className={styles.panelNotice}>Ni dovolj podatkov za graf sestave tal.</p>
+            )}
+          </div>
+        </div>
+
+        <div className={styles.chartPanel}>
+          <div className={styles.chartHeader}>
+            <div>
+              <p className={styles.chartTitle}>Največ pridelano v regiji</p>
+              <p className={styles.chartSub}>
+                {topCrops ? `${topCrops.region}, ${topCrops.year} · vir: ${topCrops.source}` : 'Nalagam podatke SURS ...'}
+              </p>
+            </div>
+          </div>
+          <div className={styles.chartBox}>
+            {topCrops?.crops.length ? (
+              <Bar data={cropChartData} options={barOptions} />
+            ) : (
+              <p className={styles.panelNotice}>{topCropsError ?? 'Ni podatkov za regijo.'}</p>
+            )}
+          </div>
+        </div>
       </section>
 
       <section className={styles.recommendPanel}>
