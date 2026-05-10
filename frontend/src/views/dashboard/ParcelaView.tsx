@@ -461,6 +461,14 @@ function ParcelaView() {
       .finally(() => {
         if (!active) return;
         setWeatherLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [center]);
+
+  useEffect(() => {
     if (!analysis) return;
 
     let active = true;
@@ -479,7 +487,6 @@ function ParcelaView() {
     return () => {
       active = false;
     };
-  }, [center]);
   }, [analysis]);
 
   const soilCards = [
@@ -574,49 +581,42 @@ function ParcelaView() {
               ))}
             </div>
           </section>
-      <section className={styles.chartGrid}>
-        <div className={styles.chartPanel}>
-          <div className={styles.chartHeader}>
-            <div>
-              <p className={styles.chartTitle}>Sestava tal</p>
-              <p className={styles.chartSub}>Pesek, melj in glina po SoilGrids</p>
-            </div>
-          </div>
-          <div className={styles.chartBox}>
-            {soilComposition.length > 0 ? (
-              <Pie data={soilChartData} options={chartOptions} />
-            ) : (
-              <p className={styles.panelNotice}>Ni dovolj podatkov za graf sestave tal.</p>
-            )}
-          </div>
-        </div>
 
-        <div className={styles.chartPanel}>
-          <div className={styles.chartHeader}>
-            <div>
-              <p className={styles.chartTitle}>Največ pridelano v regiji</p>
-              <p className={styles.chartSub}>
-                {topCrops ? `${topCrops.region}, ${topCrops.year} · vir: ${topCrops.source}` : 'Nalagam podatke SURS ...'}
-              </p>
+          <section className={styles.chartGrid} style={{ marginTop: 24 }}>
+            <div className={styles.chartPanel}>
+              <div className={styles.chartHeader}>
+                <div>
+                  <p className={styles.chartTitle}>Sestava tal</p>
+                  <p className={styles.chartSub}>Pesek, melj in glina po SoilGrids</p>
+                </div>
+              </div>
+              <div className={styles.chartBox}>
+                {soilComposition.length > 0 ? (
+                  <Pie data={soilChartData} options={chartOptions} />
+                ) : (
+                  <p className={styles.panelNotice}>Ni dovolj podatkov za graf sestave tal.</p>
+                )}
+              </div>
             </div>
-          </div>
-          <div className={styles.chartBox}>
-            {topCrops?.crops.length ? (
-              <Bar data={cropChartData} options={barOptions} />
-            ) : (
-              <p className={styles.panelNotice}>{topCropsError ?? 'Ni podatkov za regijo.'}</p>
-            )}
-          </div>
-        </div>
-      </section>
 
-      <section className={styles.recommendPanel}>
-        <div className={styles.recommendHeader}>
-          <div>
-            <p className={styles.recommendTitle}><Bot size={17} /> AI priporočila — Kaj saditi?</p>
-            <p className={styles.recommendSub}>Glede na pH, teksturo, dušik in organski ogljik</p>
-          </div>
-          <span className={styles.modelBadge}>SoilGrids</span>
+            <div className={styles.chartPanel}>
+              <div className={styles.chartHeader}>
+                <div>
+                  <p className={styles.chartTitle}>Največ pridelano v regiji</p>
+                  <p className={styles.chartSub}>
+                    {topCrops ? `${topCrops.region}, ${topCrops.year} · vir: ${topCrops.source}` : 'Nalagam podatke SURS ...'}
+                  </p>
+                </div>
+              </div>
+              <div className={styles.chartBox}>
+                {topCrops?.crops.length ? (
+                  <Bar data={cropChartData} options={barOptions} />
+                ) : (
+                  <p className={styles.panelNotice}>{topCropsError ?? 'Ni podatkov za regijo.'}</p>
+                )}
+              </div>
+            </div>
+          </section>
         </div>
 
         <div className={styles.weatherPanel}>
