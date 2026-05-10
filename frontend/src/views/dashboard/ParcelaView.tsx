@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Bot, CalendarDays, CloudRain, Droplets, FlaskConical, Leaf, Sprout } from 'lucide-react';
+import { ArrowLeft, Bot, CalendarDays, CloudRain, Droplets, FlaskConical, Leaf, MapPin, Sprout } from 'lucide-react';
+import { MapContainer, TileLayer, CircleMarker, Tooltip as LeafletTooltip } from 'react-leaflet';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArcElement,
@@ -619,64 +620,97 @@ function ParcelaView() {
           </section>
         </div>
 
-        <div className={styles.weatherPanel}>
-          <div className={styles.weatherHeader}>
-            <p className={styles.weatherTitle}>Vreme</p>
-          </div>
-          <p className={styles.weatherSource}>OpenMeteo · Včeraj–7 dni</p>
-          <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: '0 0 16px' }} />
+        <div>
+          <div className={styles.weatherPanel}>
+            <div className={styles.weatherHeader}>
+              <p className={styles.weatherTitle}>Vreme</p>
+            </div>
+            <p className={styles.weatherSource}>OpenMeteo · Včeraj–7 dni</p>
+            <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: '0 0 16px' }} />
 
-          {weatherLoading && <p className={styles.weatherLoading}>Nalagam vremensko napoved ...</p>}
+            {weatherLoading && <p className={styles.weatherLoading}>Nalagam vremensko napoved ...</p>}
 
-          {weather.length > 0 && (
-            <>
-              <div className={styles.weatherCurrent}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
-                  <span style={{ fontSize: 28 }}>{weatherIcon(weather[0].weatherCode)}</span>
-                  <div>
-                    <p className={styles.weatherCurrentTemp}>{Math.round(weather[0].maxTemp)}°C</p>
-                    <p className={styles.weatherCurrentDesc}>{weatherDescription(weather[0].weatherCode)} · Danes</p>
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <p className={styles.weatherCurrentRain}>
-                    <Droplets size={14} style={{ marginRight: 2, verticalAlign: -2 }} />
-                    {weather[0].precipitation}%
-                  </p>
-                  <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>dežja</p>
-                </div>
-              </div>
-
-              {weather.map((day, i) => {
-                const pct = day.precipitation;
-                const alpha = pct <= 0 ? 0 : Math.min(0.15 + (pct / 100) * 0.85, 1);
-                const barColor = pct <= 0
-                  ? '#e2e8f0'
-                  : `rgba(59, 130, 246, ${alpha})`;
-
-                const dayLabel = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : day.dayName;
-
-                return (
-                  <div key={day.date} className={styles.weatherDayRow}>
-                    <p className={styles.weatherDayName}>{dayLabel}</p>
-                    <span className={styles.weatherDayIcon}>{weatherIcon(day.weatherCode)}</span>
-                    <div className={styles.weatherBar}>
-                      <div
-                        className={styles.weatherBarFill}
-                        style={{
-                          left: 0,
-                          width: `${Math.max(pct, 2)}%`,
-                          background: barColor,
-                        }}
-                      />
+            {weather.length > 0 && (
+              <>
+                <div className={styles.weatherCurrent}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+                    <span style={{ fontSize: 28 }}>{weatherIcon(weather[0].weatherCode)}</span>
+                    <div>
+                      <p className={styles.weatherCurrentTemp}>{Math.round(weather[0].maxTemp)}°C</p>
+                      <p className={styles.weatherCurrentDesc}>{weatherDescription(weather[0].weatherCode)} · Danes</p>
                     </div>
-                    <p className={styles.weatherDayRain}>{pct}%</p>
-                    <p className={styles.weatherDayMax}>{Math.round(day.maxTemp)}°</p>
-                    <p className={styles.weatherDayMin}>{Math.round(day.minTemp)}°</p>
                   </div>
-                );
-              })}
-            </>
+                  <div style={{ textAlign: 'right' }}>
+                    <p className={styles.weatherCurrentRain}>
+                      <Droplets size={14} style={{ marginRight: 2, verticalAlign: -2 }} />
+                      {weather[0].precipitation}%
+                    </p>
+                    <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>dežja</p>
+                  </div>
+                </div>
+
+                {weather.map((day, i) => {
+                  const pct = day.precipitation;
+                  const alpha = pct <= 0 ? 0 : Math.min(0.15 + (pct / 100) * 0.85, 1);
+                  const barColor = pct <= 0
+                    ? '#e2e8f0'
+                    : `rgba(59, 130, 246, ${alpha})`;
+
+                  const dayLabel = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : day.dayName;
+
+                  return (
+                    <div key={day.date} className={styles.weatherDayRow}>
+                      <p className={styles.weatherDayName}>{dayLabel}</p>
+                      <span className={styles.weatherDayIcon}>{weatherIcon(day.weatherCode)}</span>
+                      <div className={styles.weatherBar}>
+                        <div
+                          className={styles.weatherBarFill}
+                          style={{
+                            left: 0,
+                            width: `${Math.max(pct, 2)}%`,
+                            background: barColor,
+                          }}
+                        />
+                      </div>
+                      <p className={styles.weatherDayRain}>{pct}%</p>
+                      <p className={styles.weatherDayMax}>{Math.round(day.maxTemp)}°</p>
+                      <p className={styles.weatherDayMin}>{Math.round(day.minTemp)}°</p>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </div>
+
+          {center && (
+            <div className={styles.locationPanel}>
+              <p className={styles.locationTitle}>Lokacija</p>
+              <div className={styles.locationMap}>
+                <MapContainer
+                  center={[center[0], center[1]]}
+                  zoom={14}
+                  scrollWheelZoom={false}
+                  dragging={false}
+                  zoomControl={false}
+                  attributionControl={false}
+                  style={{ width: '100%', height: '100%', borderRadius: 10 }}
+                >
+                  <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                  <CircleMarker
+                    center={[center[0], center[1]]}
+                    radius={8}
+                    pathOptions={{ color: '#ffffff', fillColor: '#10b981', fillOpacity: 1, weight: 3 }}
+                  >
+                    <LeafletTooltip permanent direction="bottom" offset={[0, 10]}>
+                      {parcela.name}
+                    </LeafletTooltip>
+                  </CircleMarker>
+                </MapContainer>
+              </div>
+              <p className={styles.locationCoords}>
+                {center[0].toFixed(4)}° N, {center[1].toFixed(4)}° E
+              </p>
+            </div>
           )}
         </div>
       </div>
