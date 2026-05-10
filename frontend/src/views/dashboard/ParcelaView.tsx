@@ -688,7 +688,7 @@ function ParcelaView() {
               <div className={styles.locationMap}>
                 <MapContainer
                   center={[center[0], center[1]]}
-                  zoom={14}
+                  zoom={12}
                   scrollWheelZoom={false}
                   dragging={false}
                   zoomControl={false}
