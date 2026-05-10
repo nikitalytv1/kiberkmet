@@ -5,6 +5,7 @@ import {
   getParcelaById,
   createParcela,
   updateParcela,
+  analyzeParcela,
   deleteParcela
 } from '../controllers/parcele.controller.js';
 
@@ -17,6 +18,8 @@ router.get('/:id', getParcelaById);
 router.post('/', createParcela);
 
 router.put('/:id', updateParcela);
+
+router.post('/:id/analyze', analyzeParcela);
 
 router.delete('/:id', deleteParcela);
 

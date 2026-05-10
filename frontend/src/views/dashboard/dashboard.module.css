@@ -216,3 +216,259 @@
   color: #9ca3af;
   grid-column: 1 / -1;
 }
+
+.detailHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: #0f766e;
+}
+
+.detailEyebrow {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.detailSub {
+  color: #94a3b8;
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+
+.analysisPanel,
+.recommendPanel {
+  background: #ffffff;
+  border: 1px solid #edf0ea;
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+}
+
+.analysisPanel {
+  padding: 22px;
+}
+
+.panelNotice {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 14px;
+}
+
+.soilGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 760px) {
+  .soilGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1120px) {
+  .soilGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.soilCard {
+  background: #f4f6f1;
+  border-radius: 10px;
+  padding: 16px 18px;
+  min-height: 104px;
+}
+
+.soilCardHeader,
+.soilValueRow,
+.recommendHeader,
+.recommendTitle,
+.compatibilityTop,
+.cropMeta {
+  display: flex;
+  align-items: center;
+}
+
+.soilCardHeader,
+.recommendHeader,
+.compatibilityTop {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.soilLabel {
+  color: #9aa5b1;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.statusDotOk,
+.statusDotWarn {
+  border-radius: 999px;
+  height: 9px;
+  width: 9px;
+  flex: 0 0 auto;
+}
+
+.statusDotOk {
+  background: #10b981;
+}
+
+.statusDotWarn {
+  background: #f59e0b;
+}
+
+.soilValueRow {
+  color: #0f172a;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.soilValue {
+  color: #0f172a;
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1;
+  margin: 0;
+}
+
+.soilSub {
+  color: #a4afbd;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 8px 0 0;
+}
+
+.recommendPanel {
+  overflow: hidden;
+}
+
+.recommendHeader {
+  border-bottom: 1px solid #eef2f7;
+  padding: 18px 22px;
+}
+
+.recommendTitle {
+  color: #1f2937;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.recommendSub {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 4px 0 0;
+}
+
+.modelBadge {
+  background: #0f6b4f;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+
+.compatibilityList {
+  display: flex;
+  flex-direction: column;
+}
+
+.compatibilityRow {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 14px;
+  padding: 18px 22px;
+}
+
+.compatibilityRow + .compatibilityRow {
+  border-top: 1px solid #f1f5f9;
+}
+
+.cropIcon {
+  align-items: center;
+  background: #f4f6f1;
+  border-radius: 9px;
+  display: flex;
+  font-size: 22px;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+.compatibilityBody {
+  min-width: 0;
+}
+
+.cropName {
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.compatibilityBadge {
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 9px;
+}
+
+.compatibilityTrack {
+  background: #eef2f7;
+  border-radius: 999px;
+  height: 8px;
+  margin-top: 8px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.compatibilityFill {
+  border-radius: inherit;
+  height: 100%;
+}
+
+.compatibilityGood {
+  background: #0f6b4f;
+  color: #dffbea;
+}
+
+.compatibilityWarn {
+  background: #f59e0b;
+  color: #fff7dc;
+}
+
+.compatibilityBad {
+  background: #dc2626;
+  color: #ffe4e6;
+}
+
+.cropMeta {
+  color: #94a3b8;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 8px 0 0;
+}

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Polygon, Polyline, CircleMarker, MapContainer, TileLayer, Tooltip } from 'react-leaflet';
 import styles from './map.module.css';
 import { Point, DrawnPolygon, MARIBOR_CENTER, COLORS } from './types';
-import { saveParcela, getParcele, deleteParcela } from '../../api/parcele';
+import { saveParcela, getParcele, updateParcela, deleteParcela } from '../../api/parcele';
 import { CoordinatesDisplay }   from './components/CoordinatesDisplay';
 import { ColorPickerPanel }     from './components/ColorPickerPanel';
 import { MapToolbar }           from './components/MapToolbar';
@@ -27,8 +27,17 @@ function MapView() {
   const [selectedId, setSelectedId]       = useState<string | null>(null);
 
   const handleColorChange = useCallback((id: string, color: string) => {
+    const previous = polygons.find(p => p.id === id)?.color;
     setPolygons(prev => prev.map(p => p.id === id ? { ...p, color } : p));
-  }, []);
+
+    updateParcela(id, { color }).catch(err => {
+      console.error('Napaka pri posodabljanju barve:', err);
+
+      if (previous) {
+        setPolygons(prev => prev.map(p => p.id === id ? { ...p, color: previous } : p));
+      }
+    });
+  }, [polygons]);
 
   useEffect(() => {
     getParcele().then(parcele => {
@@ -79,12 +88,18 @@ function MapView() {
   const handleNameConfirm = useCallback((name: string) => {
     if (!pendingPolygon) return;
     const { pts, color } = pendingPolygon;
-    setPolygons(prev => [...prev, { pts, color, name }]);
+    const tempId = crypto.randomUUID();
+    setPolygons(prev => [...prev, { id: tempId, pts, color, name }]);
     setPendingPolygon(null);
     setActiveTool('move');
-    saveParcela(name, color, pts).catch(err =>
-      console.error('Napaka pri shranjevanju parcele:', err)
-    );
+    saveParcela(name, color, pts)
+      .then(saved => {
+        setPolygons(prev => prev.map(p => p.id === tempId ? { ...p, id: saved.id } : p));
+      })
+      .catch(err => {
+        console.error('Napaka pri shranjevanju parcele:', err);
+        setPolygons(prev => prev.filter(p => p.id !== tempId));
+      });
   }, [pendingPolygon]);
 
   const handleNameCancel = useCallback(() => {
@@ -97,7 +112,16 @@ function MapView() {
     const pg = polygons[deleteTarget];
     setPolygons(prev => prev.filter((_, i) => i !== deleteTarget));
     setDeleteTarget(null);
-    if (pg.id) deleteParcela(pg.id).catch(err => console.error('Napaka pri brisanju:', err));
+    if (pg.id) {
+      deleteParcela(pg.id).catch(err => {
+        console.error('Napaka pri brisanju:', err);
+        setPolygons(prev => {
+          const next = [...prev];
+          next.splice(deleteTarget, 0, pg);
+          return next;
+        });
+      });
+    }
   }, [deleteTarget, polygons]);
 
   const handleDeleteCancel = useCallback(() => {
