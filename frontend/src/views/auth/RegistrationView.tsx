@@ -5,8 +5,8 @@ import { useRegistrationForm } from '../../hooks/useRegistrationForm';
 
 function RegistrationView() {
   const { fields, setters, error, loading, handleSubmit } = useRegistrationForm();
-  const { firstName, lastName, email, password, confirmPassword, terms } = fields;
-  const { setFirstName, setLastName, setEmail, setPassword, setConfirmPassword, setTerms } = setters;
+  const { firstName, lastName, email, password, confirmPassword } = fields;
+  const { setFirstName, setLastName, setEmail, setPassword, setConfirmPassword } = setters;
 
   return (
     <AuthLayout
@@ -33,18 +33,7 @@ function RegistrationView() {
         <FormField id="confirmPassword" label="Potrdi geslo" type="password" placeholder="Ponovi geslo"
           value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
 
-        <div className={styles.checkboxRow}>
-          <input id="terms" type="checkbox" className={styles.checkbox}
-            checked={terms} onChange={e => setTerms(e.target.checked)} />
-          <label htmlFor="terms" className={styles.checkboxLabel}>
-            Strinjam se s{' '}
-            <a href="#" className={styles.link}>Pogoji uporabe</a>
-            {' '}in{' '}
-            <a href="#" className={styles.link}>Politiko zasebnosti</a>
-          </label>
-        </div>
-
-        {error && <p className={styles.error}>{error}</p>}
+{error && <p className={styles.error}>{error}</p>}
 
         <button type="submit" className={styles.submitBtn} disabled={loading}>
           {loading ? 'Registracija...' : 'Ustvari račun'}
