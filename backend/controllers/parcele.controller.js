@@ -125,6 +125,7 @@ function getAnalysisCandidates(coordinates, lon, lat) {
 
 // GET ALL
 export async function getParcele(req, res) {
+  const userId = req.user.userId;
   try {
     const parcele = await prisma.$queryRaw`
       SELECT
@@ -155,6 +156,7 @@ export async function getParcele(req, res) {
           LIMIT 1
         ) AS analysis
       FROM "Parcela"
+      WHERE "userId" = ${userId}
       ORDER BY "createdAt" DESC
     `;
 
@@ -171,6 +173,7 @@ export async function getParcele(req, res) {
 // GET BY ID
 export async function getParcelaById(req, res) {
   const { id } = req.params;
+  const userId = req.user.userId;
 
   try {
     const parcela = await prisma.$queryRaw`
@@ -202,7 +205,7 @@ export async function getParcelaById(req, res) {
           LIMIT 1
         ) AS analysis
       FROM "Parcela"
-      WHERE id = ${id}
+      WHERE id = ${id} AND "userId" = ${userId}
     `;
 
     if (!parcela[0]) {
@@ -224,6 +227,7 @@ export async function getParcelaById(req, res) {
 // CREATE
 export async function createParcela(req, res) {
   const { name, color, coordinates } = req.body;
+  const userId = req.user.userId;
 
   if (!name || !coordinates) {
     return res.status(400).json({
@@ -247,6 +251,7 @@ export async function createParcela(req, res) {
         color,
         "typeOfUse",
         coordinates,
+        "userId",
         "createdAt",
         "updatedAt"
       )
@@ -256,6 +261,7 @@ export async function createParcela(req, res) {
         ${color ?? null},
         'Ostalo',
         ST_SetSRID(ST_GeomFromGeoJSON(${geoJson}), 4326),
+        ${userId},
         NOW(),
         NOW()
       )
@@ -284,6 +290,7 @@ export async function createParcela(req, res) {
 // UPDATE
 export async function updateParcela(req, res) {
   const { id } = req.params;
+  const userId = req.user.userId;
 
   const {
     name,
@@ -358,7 +365,7 @@ export async function updateParcela(req, res) {
 
         "updatedAt" = NOW()
 
-      WHERE id = ${id}
+      WHERE id = ${id} AND "userId" = ${userId}
 
       RETURNING
         id,
@@ -399,6 +406,7 @@ export async function updateParcela(req, res) {
 // RUN AND SAVE SOIL ANALYSIS
 export async function analyzeParcela(req, res) {
   const { id } = req.params;
+  const userId = req.user.userId;
 
   try {
     const parcela = await prisma.$queryRaw`
@@ -408,7 +416,7 @@ export async function analyzeParcela(req, res) {
         ST_Y(ST_PointOnSurface(coordinates)) AS lat,
         ST_AsGeoJSON(coordinates)::json AS coordinates
       FROM "Parcela"
-      WHERE id = ${id}
+      WHERE id = ${id} AND "userId" = ${userId}
     `;
 
     if (!parcela[0]) {
@@ -509,12 +517,13 @@ export async function analyzeParcela(req, res) {
 // DELETE
 export async function deleteParcela(req, res) {
   const { id } = req.params;
+  const userId = req.user.userId;
 
   try {
     const existing = await prisma.$queryRaw`
       SELECT id
       FROM "Parcela"
-      WHERE id = ${id}
+      WHERE id = ${id} AND "userId" = ${userId}
     `;
 
     if (!existing[0]) {

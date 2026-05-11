@@ -1,6 +1,7 @@
-import { Outlet, NavLink } from 'react-router-dom';
-import { Map, Layers, Settings, ChevronRight } from 'lucide-react';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Map, Layers, Settings, LogOut } from 'lucide-react';
 import styles from './AppLayout.module.css';
+import { useAuth } from '../context/AuthContext';
 
 const navItems = [
   { label: 'Zemljevid', icon: Map, to: '/map' },
@@ -8,7 +9,24 @@ const navItems = [
   { label: 'Nastavitve', icon: Settings, to: '/settings' },
 ];
 
+function initials(name: string) {
+  return name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
+
 function AppLayout() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleLogout() {
+    await logout();
+    navigate('/login');
+  }
+
   return (
     <div className={styles.wrapper}>
       <aside className={styles.sidebar}>
@@ -38,12 +56,19 @@ function AppLayout() {
 
         <div className={styles.account}>
           <div className={styles.accountInner}>
-            <div className={styles.avatar}>JN</div>
+            <div className={styles.avatar}>{user ? initials(user.name) : '?'}</div>
             <div className={styles.accountInfo}>
-              <p className={styles.accountName}>Janez Novak</p>
-              <p className={styles.accountEmail}>janez@primer.si</p>
+              <p className={styles.accountName}>{user?.name ?? ''}</p>
+              <p className={styles.accountEmail}>{user?.email ?? ''}</p>
             </div>
-            <ChevronRight size={13} className={styles.accountChevron} />
+            <button
+              className={styles.accountChevron}
+              onClick={handleLogout}
+              title="Odjava"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+            >
+              <LogOut size={13} />
+            </button>
           </div>
         </div>
       </aside>

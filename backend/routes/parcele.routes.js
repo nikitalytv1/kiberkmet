@@ -8,19 +8,15 @@ import {
   analyzeParcela,
   deleteParcela
 } from '../controllers/parcele.controller.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
-router.get('/', getParcele);
-
-router.get('/:id', getParcelaById);
-
-router.post('/', createParcela);
-
-router.put('/:id', updateParcela);
-
-router.post('/:id/analyze', analyzeParcela);
-
-router.delete('/:id', deleteParcela);
+router.get('/', requireAuth, getParcele);
+router.get('/:id', requireAuth, getParcelaById);
+router.post('/', requireAuth, createParcela);
+router.put('/:id', requireAuth, updateParcela);
+router.post('/:id/analyze', requireAuth, analyzeParcela);
+router.delete('/:id', requireAuth, deleteParcela);
 
 export default router;

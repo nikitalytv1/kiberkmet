@@ -1,29 +1,29 @@
-import { Router } from 'express';
+import { Router } from "express";
 
 import {
   getUsers,
+  getMe,
   registerUser,
   loginUser,
   refreshToken,
   updateUser,
   deleteUser,
   logoutUser,
-} from '../controllers/users.controller.js';
+} from "../controllers/users.controller.js";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
 
-router.get('/', getUsers);
+// Javni routi
+router.post("/register", registerUser);
+router.post("/login", loginUser);
+router.post("/refresh", refreshToken);
 
-router.post('/register', registerUser);
-
-router.post('/login', loginUser);
-
-router.post('/refresh', refreshToken);
-
-router.post('/logout', logoutUser);
-
-router.put('/:id', updateUser);
-
-router.delete('/:id', deleteUser);
+// Zaščiteni routi
+router.get("/me", requireAuth, getMe);
+router.get("/", requireAuth, getUsers);
+router.put("/:id", requireAuth, updateUser);
+router.delete("/:id", requireAuth, deleteUser);
+router.post("/logout", requireAuth, logoutUser);
 
 export default router;
