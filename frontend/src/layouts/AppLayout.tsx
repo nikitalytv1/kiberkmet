@@ -1,11 +1,10 @@
 import { Outlet, NavLink } from 'react-router-dom';
-import { Map, Layers, Link, Settings, ChevronRight } from 'lucide-react';
+import { Map, Layers, Settings, ChevronRight } from 'lucide-react';
 import styles from './AppLayout.module.css';
 
 const navItems = [
   { label: 'Zemljevid', icon: Map, to: '/map' },
   { label: 'Moje parcele', icon: Layers, to: '/dashboard' },
-  { label: 'Veriga blokov', icon: Link, to: '/blockchain' },
   { label: 'Nastavitve', icon: Settings, to: '/settings' },
 ];
 
