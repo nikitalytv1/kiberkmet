@@ -3,7 +3,7 @@ import cors from "cors";
 import pkg from "@prisma/client";
 const { PrismaClient } = pkg;
 import { PrismaPg } from "@prisma/adapter-pg";
-import userRoutes from "./routes/users.js";
+import userRoutes from "./routes/users.routes.js";
 import parceleRoutes from './routes/parcele.routes.js';
 import soilRoutes from "./routes/soil.js";
 import statisticsRoutes from "./routes/statistics.js";
