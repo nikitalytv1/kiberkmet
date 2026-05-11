@@ -1,4 +1,5 @@
 import { Point } from '../views/map/types';
+import { fetchWithAuth } from './fetchWithAuth';
 
 export interface Parcela {
   id: string;
@@ -42,7 +43,7 @@ function fromGeoJSON(geo: { coordinates: number[][][] }): Point[] {
 }
 
 export async function saveParcela(name: string, color: string, pts: Point[]): Promise<Parcela> {
-  const res = await fetch('/api/parcele', {
+  const res = await fetchWithAuth('/api/parcele', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, color, coordinates: toGeoJSON(pts) }),
@@ -53,7 +54,7 @@ export async function saveParcela(name: string, color: string, pts: Point[]): Pr
 }
 
 export async function getParcele(): Promise<{ id: string; name: string; color: string | null; gerk_pid?: string | null; typeOfUse?: string | number | null; areaHectares?: number | null; pts: Point[]; analysis?: ParcelaAnalysis | null }[]> {
-  const res = await fetch('/api/parcele');
+  const res = await fetchWithAuth('/api/parcele');
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Napaka pri nalaganju parcel.');
   return data.map((p: Parcela) => ({
@@ -69,7 +70,7 @@ export async function getParcele(): Promise<{ id: string; name: string; color: s
 }
 
 export async function getParcela(id: string): Promise<{ id: string; name: string; color: string | null; gerk_pid?: string | null; typeOfUse?: string | number | null; areaHectares?: number | null; pts: Point[]; analysis?: ParcelaAnalysis | null }> {
-  const res = await fetch(`/api/parcele/${id}`);
+  const res = await fetchWithAuth(`/api/parcele/${id}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Napaka pri nalaganju parcele.');
   return {
@@ -85,7 +86,7 @@ export async function getParcela(id: string): Promise<{ id: string; name: string
 }
 
 export async function analyzeParcela(id: string): Promise<ParcelaAnalysis> {
-  const res = await fetch(`/api/parcele/${id}/analyze`, { method: 'POST' });
+  const res = await fetchWithAuth(`/api/parcele/${id}/analyze`, { method: 'POST' });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Napaka pri analizi parcele.');
   return data;
@@ -110,7 +111,7 @@ export async function updateParcela(
     delete body.pts;
   }
 
-  const res = await fetch(`/api/parcele/${id}`, {
+  const res = await fetchWithAuth(`/api/parcele/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -121,7 +122,7 @@ export async function updateParcela(
 }
 
 export async function deleteParcela(id: string): Promise<void> {
-  const res = await fetch(`/api/parcele/${id}`, { method: 'DELETE' });
+  const res = await fetchWithAuth(`/api/parcele/${id}`, { method: 'DELETE' });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.error || 'Napaka pri brisanju parcele.');

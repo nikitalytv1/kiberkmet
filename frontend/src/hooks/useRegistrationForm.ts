@@ -9,7 +9,6 @@ export function useRegistrationForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [terms, setTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -33,11 +32,6 @@ export function useRegistrationForm() {
       setError('Gesli se ne ujemata.');
       return;
     }
-    if (!terms) {
-      setError('Strinjati se moraš s pogoji uporabe.');
-      return;
-    }
-
     setLoading(true);
     try {
       await register({ name: `${firstName} ${lastName}`, email, password });
@@ -50,8 +44,8 @@ export function useRegistrationForm() {
   }
 
   return {
-    fields: { firstName, lastName, email, password, confirmPassword, terms },
-    setters: { setFirstName, setLastName, setEmail, setPassword, setConfirmPassword, setTerms },
+    fields: { firstName, lastName, email, password, confirmPassword },
+    setters: { setFirstName, setLastName, setEmail, setPassword, setConfirmPassword },
     error,
     loading,
     handleSubmit,
