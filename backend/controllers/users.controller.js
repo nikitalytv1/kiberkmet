@@ -191,3 +191,17 @@ export async function deleteUser(req, res) {
 export async function logoutUser(req, res) {
   return res.json({ message: "Odjava uspešna." });
 }
+
+// GET ME
+export async function getMe(req, res) {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
+    if (!user) {
+      return res.status(404).json({ error: "Uporabnik ne obstaja." });
+    }
+    return res.json({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Interna napaka strežnika." });
+  }
+}
