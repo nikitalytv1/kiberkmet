@@ -4,6 +4,8 @@ import styles from './dashboard.module.css';
 import { ParcelaCard, ParcelaItem } from './ParcelaCard';
 import { getParcele, ParcelaAnalysis } from '../../api/parcele';
 import { COLORS } from '../map/types';
+import ParcelaBarChart, { BarItem } from './ParcelaBarChart';
+import RabaDonutChart, { DonutSlice } from './RabaDonutChart';
 
 type SoilLayer = {
   name: string;
@@ -91,12 +93,32 @@ function getStatusLabel(warnings: number) {
 function DashboardView() {
   const navigate = useNavigate();
   const [parcele, setParcele] = useState<ParcelaItem[]>([]);
+  const [barItems, setBarItems] = useState<BarItem[]>([]);
+  const [donutSlices, setDonutSlices] = useState<DonutSlice[]>([]);
   const [areaValues, setAreaValues] = useState<number[]>([]);
 
   useEffect(() => {
     getParcele()
       .then(data => {
         setAreaValues(data.map(p => p.areaHectares).filter((value): value is number => value != null));
+        const rabaMap = new Map<string, number>();
+        data.forEach(p => {
+          const key = String(p.typeOfUse || 'Ostalo');
+          rabaMap.set(key, (rabaMap.get(key) ?? 0) + (p.areaHectares ?? 0));
+        });
+        setDonutSlices(
+          Array.from(rabaMap.entries())
+            .map(([label, area]) => ({ label, area }))
+            .sort((a, b) => b.area - a.area)
+        );
+
+        setBarItems(data.map(p => ({
+          id: p.id,
+          name: String(p.name || p.gerk_pid || 'Parcela'),
+          color: p.color ?? COLORS[0],
+          ph: getSoilValue(p.analysis, 'phh2o'),
+          area: p.areaHectares ?? null,
+        })));
         setParcele(data.map(p => {
           const ph = getSoilValue(p.analysis, 'phh2o');
           const nitrogen = getSoilValue(p.analysis, 'nitrogen');
@@ -156,7 +178,24 @@ function DashboardView() {
         ))}
       </div>
 
-      <div className={styles.parceleGrid}>
+      <div style={{ display: 'flex', gap: 16 }}>
+        {donutSlices.length > 0 && (
+          <div className={styles.statCard} style={{ padding: '20px 22px', flex: 1, minWidth: 0 }}>
+            <p className={styles.statLabel} style={{ marginBottom: 14 }}>Porazdelitev tipov rabe tal</p>
+            <RabaDonutChart slices={donutSlices} />
+          </div>
+        )}
+
+        {barItems.length > 1 && (
+          <div className={styles.statCard} style={{ padding: '20px 22px', flex: 1, minWidth: 0 }}>
+            <p className={styles.statLabel} style={{ marginBottom: 14 }}>Primerjava parcel</p>
+            <ParcelaBarChart items={barItems} onClickItem={id => navigate(`/dashboard/${id}`)} />
+          </div>
+        )}
+      </div>
+
+
+      <div className={styles.parceleGrid} style={{ marginTop: 20 }}>
         {parcele.length === 0 ? (
           <p className={styles.empty}>Ni še nobene parcele. Nariši jo na zemljevidu.</p>
         ) : (

@@ -6,12 +6,14 @@ import {
   createParcela,
   updateParcela,
   analyzeParcela,
-  deleteParcela
+  deleteParcela,
+  getTypes,
 } from '../controllers/parcele.controller.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
+router.get('/types', getTypes);
 router.get('/', requireAuth, getParcele);
 router.get('/:id', requireAuth, getParcelaById);
 router.post('/', requireAuth, createParcela);

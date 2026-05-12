@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Bot, CalendarDays, CloudRain, Droplets, FlaskConical, Leaf, MapPin, Sprout } from 'lucide-react';
+import { ArrowLeft, Bot, CalendarDays, Droplets, FlaskConical, Leaf, Sprout } from 'lucide-react';
 import { MapContainer, TileLayer, CircleMarker, Tooltip as LeafletTooltip } from 'react-leaflet';
 import { Link, useParams } from 'react-router-dom';
 import {
@@ -111,15 +111,6 @@ async function fetchWeather(lat: number, lon: number): Promise<WeatherDay[]> {
   });
 }
 
-const SOIL_EMPTY: SoilValues = {
-  ph: null,
-  cec: null,
-  nitrogen: null,
-  organicCarbon: null,
-  clay: null,
-  sand: null,
-  silt: null,
-};
 
 const CROPS = [
   {
@@ -384,7 +375,7 @@ function ParcelaView() {
       },
       tooltip: {
         callbacks: {
-          label: (ctx: { parsed: { x: number } }) => `${formatNumber(ctx.parsed.x, 0)} ${topCrops?.unit ?? 't'}`,
+          label: (ctx: { parsed: { x: number | null } }) => `${formatNumber(ctx.parsed.x ?? null, 0)} ${topCrops?.unit ?? 't'}`,
         },
       },
     },
@@ -520,6 +511,7 @@ function ParcelaView() {
     <div className={styles.page}>
       <div className={styles.detailHeader}>
         <Link to="/dashboard" className={styles.backLink}><ArrowLeft size={16} /> Nazaj</Link>
+        <div className={styles.detailHeaderDivider} />
         <div>
           <p className={styles.detailEyebrow}>Analiza tal</p>
           <h1 className={styles.title}>{parcela.name}</h1>
@@ -551,6 +543,7 @@ function ParcelaView() {
               ))}
             </div>
           </section>
+
 
           <section className={styles.recommendPanel} style={{ marginTop: 24 }}>
             <div className={styles.recommendHeader}>

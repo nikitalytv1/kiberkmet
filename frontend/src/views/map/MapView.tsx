@@ -85,14 +85,14 @@ function MapView() {
     }
   }, [selectedColor]);
 
-  const handleNameConfirm = useCallback((name: string) => {
+  const handleNameConfirm = useCallback((name: string, typeOfUse: string) => {
     if (!pendingPolygon) return;
     const { pts, color } = pendingPolygon;
     const tempId = crypto.randomUUID();
     setPolygons(prev => [...prev, { id: tempId, pts, color, name }]);
     setPendingPolygon(null);
     setActiveTool('move');
-    saveParcela(name, color, pts)
+    saveParcela(name, color, pts, typeOfUse)
       .then(saved => {
         setPolygons(prev => prev.map(p => p.id === tempId ? { ...p, id: saved.id } : p));
       })

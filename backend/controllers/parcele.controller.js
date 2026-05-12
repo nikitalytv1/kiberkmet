@@ -1,5 +1,19 @@
 import { prisma } from '../index.js';
 
+export const LAND_USE_TYPES = [
+  'Njiva',
+  'Travnik',
+  'Vinograd',
+  'Sadovnjak',
+  'Gozd',
+  'Vrt',
+  'Ostalo',
+];
+
+export function getTypes(_req, res) {
+  res.json(LAND_USE_TYPES);
+}
+
 function isValidPolygon(coordinates) {
   if (!coordinates || typeof coordinates !== 'object') return false;
 
@@ -226,8 +240,9 @@ export async function getParcelaById(req, res) {
 
 // CREATE
 export async function createParcela(req, res) {
-  const { name, color, coordinates } = req.body;
+  const { name, color, coordinates, typeOfUse } = req.body;
   const userId = req.user.userId;
+  const landUseType = LAND_USE_TYPES.includes(typeOfUse) ? typeOfUse : 'Ostalo';
 
   if (!name || !coordinates) {
     return res.status(400).json({
@@ -259,7 +274,7 @@ export async function createParcela(req, res) {
         gen_random_uuid(),
         ${name},
         ${color ?? null},
-        'Ostalo',
+        ${landUseType},
         ST_SetSRID(ST_GeomFromGeoJSON(${geoJson}), 4326),
         ${userId},
         NOW(),
