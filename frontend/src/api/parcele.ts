@@ -42,11 +42,18 @@ function fromGeoJSON(geo: { coordinates: number[][][] }): Point[] {
   return geo.coordinates[0].slice(0, -1).map(([lng, lat]) => [lat, lng] as Point);
 }
 
-export async function saveParcela(name: string, color: string, pts: Point[]): Promise<Parcela> {
+export async function getLandUseTypes(): Promise<string[]> {
+  const res = await fetch('/api/parcele/types');
+  const data = await res.json();
+  if (!res.ok) throw new Error('Napaka pri nalaganju tipov rabe.');
+  return data;
+}
+
+export async function saveParcela(name: string, color: string, pts: Point[], typeOfUse?: string): Promise<Parcela> {
   const res = await fetchWithAuth('/api/parcele', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, color, coordinates: toGeoJSON(pts) }),
+    body: JSON.stringify({ name, color, typeOfUse, coordinates: toGeoJSON(pts) }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Napaka pri shranjevanju parcele.');
