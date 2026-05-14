@@ -672,12 +672,12 @@ function ParcelaView() {
   }, [id, parcela]);
 
   const soilCards = [
-    { label: 'pH tal', value: formatNumber(soil.ph, 1), sub: 'Optimalno: 6.0-7.5', icon: FlaskConical, ok: soil.ph == null || (soil.ph >= 6 && soil.ph <= 7.5) },
-    { label: 'CEC', value: formatNumber(soil.cec, 1), sub: 'Optimalno: 10-25 cmol(c)/kg', icon: FlaskConical, ok: soil.cec == null || (soil.cec >= 10 && soil.cec <= 25) },
-    { label: 'Dušik (N)', value: `${formatNumber(soil.nitrogen, 2)} g/kg`, sub: 'Optimalno: 1.0-3.0 g/kg', icon: Leaf, ok: soil.nitrogen == null || (soil.nitrogen >= 1 && soil.nitrogen <= 3) },
-    { label: 'Org. ogljik', value: `${formatNumber(soil.organicCarbon, 1)} g/kg`, sub: 'Optimalno: nad 10 g/kg', icon: Sprout, ok: soil.organicCarbon == null || soil.organicCarbon >= 10 },
-    { label: 'Glina', value: `${formatNumber(soil.clay, 0)}%`, sub: 'Optimalno: 10-35%', icon: Droplets, ok: soil.clay == null || (soil.clay >= 10 && soil.clay <= 35) },
-    { label: 'Pesek', value: `${formatNumber(soil.sand, 0)}%`, sub: 'Optimalno: 20-60%', icon: Droplets, ok: soil.sand == null || (soil.sand >= 20 && soil.sand <= 60) },
+    { label: 'pH tal', value: formatNumber(soil.ph, 1), sub: 'Optimalno: 6.0-7.5', icon: FlaskConical, score: scoreRange(soil.ph, 6, 7.5) },
+    { label: 'CEC', value: formatNumber(soil.cec, 1), sub: 'Optimalno: 10-25 cmol(c)/kg', icon: FlaskConical, score: scoreRange(soil.cec, 10, 25) },
+    { label: 'Dušik (N)', value: `${formatNumber(soil.nitrogen, 2)} g/kg`, sub: 'Optimalno: 1.0-3.0 g/kg', icon: Leaf, score: scoreRange(soil.nitrogen, 1, 3) },
+    { label: 'Org. ogljik', value: `${formatNumber(soil.organicCarbon, 1)} g/kg`, sub: 'Optimalno: nad 10 g/kg', icon: Sprout, score: scoreRange(soil.organicCarbon, 10, 30) },
+    { label: 'Glina', value: `${formatNumber(soil.clay, 0)}%`, sub: 'Optimalno: 10-35%', icon: Droplets, score: scoreRange(soil.clay, 10, 35) },
+    { label: 'Pesek', value: `${formatNumber(soil.sand, 0)}%`, sub: 'Optimalno: 20-60%', icon: Droplets, score: scoreRange(soil.sand, 20, 60) },
   ];
 
   if (loading) {
@@ -728,19 +728,29 @@ function ParcelaView() {
                 {soilLoading && <p className={styles.panelNotice}>Osvežujem SoilGrids vrednosti ...</p>}
                 {soilError && <p className={styles.panelNotice}>{soilError}</p>}
                 <div className={styles.soilGrid}>
-                  {soilCards.map(({ label, value, sub, icon: Icon, ok }) => (
-                    <div key={label} className={styles.soilCard}>
-                      <div className={styles.soilCardHeader}>
-                        <span className={styles.soilLabel}>{label}</span>
-                        <span className={ok ? styles.statusDotOk : styles.statusDotWarn} />
+                  {soilCards.map(({ label, value, sub, icon: Icon, score }, idx) => {
+                    const isOk = score >= 80;
+                    const isWarn = score >= 65 && score < 80;
+                    const barClass = isOk ? styles.soilCardBarOk : isWarn ? styles.soilCardBarWarn : styles.soilCardBarBad;
+                    const dotClass = isOk ? styles.statusDotOk : styles.statusDotWarn;
+                    return (
+                      <div key={label} className={styles.soilCard} style={{ animationDelay: `${idx * 80}ms` }}>
+                        <div className={styles.soilCardHeader}>
+                          <span className={styles.soilLabel}>{label}</span>
+                          <span className={dotClass} />
+                        </div>
+                        <div className={styles.soilValueRow}>
+                          <Icon size={18} />
+                          <p className={styles.soilValue}>{value}</p>
+                        </div>
+                        <p className={styles.soilSub}>{sub}</p>
+                        <div
+                          className={`${styles.soilCardBar} ${barClass}`}
+                          style={{ width: `${score}%` }}
+                        />
                       </div>
-                      <div className={styles.soilValueRow}>
-                        <Icon size={18} />
-                        <p className={styles.soilValue}>{value}</p>
-                      </div>
-                      <p className={styles.soilSub}>{sub}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </>
             )}
@@ -761,8 +771,8 @@ function ParcelaView() {
             <div className={styles.compatibilityList}>
               {analysisPending ? (
                 <p className={styles.panelNotice}>Priporočila bodo vidna takoj, ko se analiza zaključi.</p>
-              ) : cropScores.map(crop => (
-                <div key={crop.name} className={styles.compatibilityRow}>
+              ) : cropScores.map((crop, idx) => (
+                <div key={crop.name} className={styles.compatibilityRow} style={{ animationDelay: `${idx * 70}ms` }}>
                   <div className={styles.cropIcon}>{crop.icon}</div>
                   <div className={styles.compatibilityBody}>
                     <div className={styles.compatibilityTop}>
@@ -772,7 +782,11 @@ function ParcelaView() {
                     <div className={styles.compatibilityTrack}>
                       <div
                         className={`${styles.compatibilityFill} ${qualityClass(crop.score)}`}
-                        style={{ width: `${crop.score}%` }}
+                        style={{
+                          width: `${crop.score}%`,
+                          ['--fill-width' as string]: `${crop.score}%`,
+                          animationDelay: `${idx * 70 + 100}ms`,
+                        }}
                       />
                     </div>
                     <p className={styles.cropMeta}><CalendarDays size={13} /> {crop.season} · {crop.yield}</p>
@@ -859,7 +873,7 @@ function ParcelaView() {
                   const dayLabel = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : day.dayName;
 
                   return (
-                    <div key={day.date} className={styles.weatherDayRow}>
+                    <div key={day.date} className={styles.weatherDayRow} style={{ animationDelay: `${i * 60}ms` }}>
                       <p className={styles.weatherDayName}>{dayLabel}</p>
                       <span className={styles.weatherDayIcon}>{weatherIcon(day.weatherCode)}</span>
                       <div className={styles.weatherBar}>
