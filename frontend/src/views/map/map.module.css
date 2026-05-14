@@ -148,6 +148,23 @@
   opacity: 0.4;
 }
 
+.drawError {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  max-width: min(520px, calc(100% - 48px));
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(127, 29, 29, 0.18);
+}
+
 /* Name polygon modal */
 .modalOverlay {
   position: absolute;
