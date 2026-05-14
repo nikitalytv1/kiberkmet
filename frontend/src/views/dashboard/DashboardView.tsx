@@ -56,6 +56,7 @@ function getSoilValue(analysis: ParcelaAnalysis | null | undefined, name: string
     silt: 10,
     wv0033: 10,
     phh2o: 10,
+    cec: 10,
     nitrogen: 100,
     soc: 10,
   };
@@ -90,6 +91,10 @@ function getStatusLabel(warnings: number) {
   return `${warnings} opoz.`;
 }
 
+function outsideRange(value: number | null, min: number, max: number) {
+  return value != null && (value < min || value > max);
+}
+
 function DashboardView() {
   const navigate = useNavigate();
   const [parcele, setParcele] = useState<ParcelaItem[]>([]);
@@ -121,6 +126,7 @@ function DashboardView() {
         })));
         setParcele(data.map(p => {
           const ph = getSoilValue(p.analysis, 'phh2o');
+          const cec = getSoilValue(p.analysis, 'cec');
           const nitrogen = getSoilValue(p.analysis, 'nitrogen');
           const organicCarbon = getSoilValue(p.analysis, 'soc');
           const sand = getSoilValue(p.analysis, 'sand');
@@ -128,13 +134,20 @@ function DashboardView() {
           const clay = getSoilValue(p.analysis, 'clay');
           const water33 = getSoilValue(p.analysis, 'wv0033');
           const warnings = [
-            !p.analysis,
-            ph != null && (ph < 6 || ph > 7.5),
-            nitrogen != null && nitrogen < 1,
+            outsideRange(ph, 6, 7.5),
+            outsideRange(cec, 10, 25),
+            outsideRange(nitrogen, 1, 3),
             organicCarbon != null && organicCarbon < 10,
-            clay != null && clay >= 40,
-            sand != null && sand >= 70,
+            outsideRange(clay, 10, 35),
+            outsideRange(sand, 20, 60),
           ].filter(Boolean).length;
+          const status = !p.analysis
+            ? 'pending'
+            : warnings === 0
+              ? 'ok'
+              : warnings >= 2
+                ? 'bad'
+                : 'warn';
 
           return {
             id: p.id,
@@ -145,8 +158,8 @@ function DashboardView() {
             ph,
             vlaga: water33,
             tip_tal: getSoilTextureClass(sand, silt, clay),
-            status: warnings === 0 ? 'ok' : warnings >= 2 ? 'bad' : 'warn',
-            statusLabel: getStatusLabel(warnings),
+            status,
+            statusLabel: !p.analysis ? 'Analiza teče' : getStatusLabel(warnings),
           };
         }));
       })
