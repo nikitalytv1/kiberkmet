@@ -139,6 +139,57 @@ function getAnalysisCandidates(coordinates, lon, lat) {
   ));
 }
 
+async function findOverlappingParcela(geoJson, userId, excludeId = null) {
+  const overlapAreaThreshold = 1;
+
+  if (excludeId) {
+    return prisma.$queryRaw`
+      WITH new_parcela AS (
+        SELECT ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(${geoJson}), 4326)) AS geom
+      )
+      SELECT
+        p.id,
+        p.name,
+        ST_Area(ST_Intersection(p.coordinates, new_parcela.geom)::geography) AS "overlapArea"
+      FROM "Parcela" p, new_parcela
+      WHERE
+        p."userId" = ${userId} AND
+        p.id <> ${excludeId} AND
+        ST_Intersects(p.coordinates, new_parcela.geom) AND
+        ST_Area(ST_Intersection(p.coordinates, new_parcela.geom)::geography) > ${overlapAreaThreshold}
+      ORDER BY "overlapArea" DESC
+      LIMIT 1
+    `;
+  }
+
+  return prisma.$queryRaw`
+    WITH new_parcela AS (
+      SELECT ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(${geoJson}), 4326)) AS geom
+    )
+    SELECT
+      p.id,
+      p.name,
+      ST_Area(ST_Intersection(p.coordinates, new_parcela.geom)::geography) AS "overlapArea"
+    FROM "Parcela" p, new_parcela
+    WHERE
+      p."userId" = ${userId} AND
+      ST_Intersects(p.coordinates, new_parcela.geom) AND
+      ST_Area(ST_Intersection(p.coordinates, new_parcela.geom)::geography) > ${overlapAreaThreshold}
+    ORDER BY "overlapArea" DESC
+    LIMIT 1
+  `;
+}
+
+async function assertNoParcelaOverlap(geoJson, userId, excludeId = null) {
+  const overlaps = await findOverlappingParcela(geoJson, userId, excludeId);
+
+  if (!overlaps[0]) return;
+
+  const error = new Error(`Parcela se prekriva z obstoječo parcelo "${overlaps[0].name}".`);
+  error.status = 409;
+  throw error;
+}
+
 async function runParcelaAnalysis(id, userId) {
   const jobKey = `${userId}:${id}`;
 
@@ -372,6 +423,7 @@ export async function createParcela(req, res) {
 
   try {
     const geoJson = JSON.stringify(coordinates);
+    await assertNoParcelaOverlap(geoJson, userId);
 
     const parcela = await prisma.$queryRaw`
       INSERT INTO "Parcela" (
@@ -414,7 +466,7 @@ export async function createParcela(req, res) {
   } catch (err) {
     console.error(err);
 
-    return res.status(500).json({
+    return res.status(err.status ?? 500).json({
       error: err.message
     });
   }
@@ -464,6 +516,10 @@ export async function updateParcela(req, res) {
       coordinates !== undefined
         ? JSON.stringify(coordinates)
         : null;
+
+    if (geoJson) {
+      await assertNoParcelaOverlap(geoJson, userId, id);
+    }
 
     const parcela = await prisma.$queryRaw`
       UPDATE "Parcela"
@@ -530,7 +586,7 @@ export async function updateParcela(req, res) {
   } catch (err) {
     console.error(err);
 
-    return res.status(500).json({
+    return res.status(err.status ?? 500).json({
       error: err.message
     });
   }

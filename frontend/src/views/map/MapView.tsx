@@ -25,6 +25,7 @@ function MapView() {
   const [hoveredIdx, setHoveredIdx]       = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget]   = useState<number | null>(null);
   const [selectedId, setSelectedId]       = useState<string | null>(null);
+  const [drawError, setDrawError]         = useState<string | null>(null);
 
   const handleColorChange = useCallback((id: string, color: string) => {
     const previous = polygons.find(p => p.id === id)?.color;
@@ -52,11 +53,13 @@ function MapView() {
       setChoosingColor(true);
       setDrawing([]);
       setMousePos(null);
+      setDrawError(null);
     } else {
       setActiveTool(id);
       setChoosingColor(false);
       setDrawing([]);
       setMousePos(null);
+      setDrawError(null);
     }
   }, []);
 
@@ -71,6 +74,7 @@ function MapView() {
     setDrawing([]);
     setMousePos(null);
     setActiveTool('move');
+    setDrawError(null);
   }, []);
 
   const handleFinish = useCallback((pts: Point[]) => {
@@ -89,6 +93,7 @@ function MapView() {
     if (!pendingPolygon) return;
     const { pts, color } = pendingPolygon;
     const tempId = crypto.randomUUID();
+    setDrawError(null);
     setPolygons(prev => [...prev, { id: tempId, pts, color, name }]);
     setPendingPolygon(null);
     setActiveTool('move');
@@ -98,6 +103,7 @@ function MapView() {
       })
       .catch(err => {
         console.error('Napaka pri shranjevanju parcele:', err);
+        setDrawError(err.message || 'Parcele ni bilo mogoče shraniti.');
         setPolygons(prev => prev.filter(p => p.id !== tempId));
       });
   }, [pendingPolygon]);
@@ -277,6 +283,12 @@ function MapView() {
               <span>Esc za preklic</span>
             </>
           )}
+        </div>
+      )}
+
+      {drawError && (
+        <div className={styles.drawError}>
+          {drawError}
         </div>
       )}
     </div>
