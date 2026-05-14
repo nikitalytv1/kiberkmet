@@ -7,6 +7,7 @@ import userRoutes from "./routes/users.routes.js";
 import parceleRoutes from './routes/parcele.routes.js';
 import soilRoutes from "./routes/soil.js";
 import statisticsRoutes from "./routes/statistics.js";
+import regionRoutes from "./routes/regions.js";
 
 BigInt.prototype.toJSON = function() {
   return this.toString();
@@ -31,6 +32,7 @@ app.use("/api/users", userRoutes);
 app.use('/api/parcele', parceleRoutes);
 app.use("/api/soil", soilRoutes);
 app.use("/api/statistics", statisticsRoutes);
+app.use("/api/regions", regionRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

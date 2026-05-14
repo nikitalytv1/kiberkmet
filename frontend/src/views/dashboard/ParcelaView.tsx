@@ -496,7 +496,7 @@ function ParcelaView() {
     labels: topCrops?.crops.map(crop => crop.name) ?? [],
     datasets: [
       {
-        label: `Pridelano (${topCrops?.unit ?? 't'})`,
+        label: `Donos (${topCrops?.unit ?? 't/ha'})`,
         data: topCrops?.crops.map(crop => crop.value) ?? [],
         backgroundColor: '#0f6b4f',
         borderRadius: 6,
@@ -560,7 +560,7 @@ function ParcelaView() {
       },
       tooltip: {
         callbacks: {
-          label: (ctx: { parsed: { x: number | null } }) => `${formatNumber(ctx.parsed.x ?? null, 0)} ${topCrops?.unit ?? 't'}`,
+          label: (ctx: { parsed: { x: number | null } }) => `${formatNumber(ctx.parsed.x ?? null, 1)} ${topCrops?.unit ?? 't/ha'}`,
         },
       },
     },
@@ -651,12 +651,12 @@ function ParcelaView() {
   }, [center]);
 
   useEffect(() => {
-    if (!analysis) return;
+    if (!id || !parcela) return;
 
     let active = true;
     setTopCropsError(null);
 
-    getRegionalTopCrops(analysis.lon)
+    getRegionalTopCrops({ parcelaId: id })
       .then(data => {
         if (!active) return;
         setTopCrops(data);
@@ -669,7 +669,7 @@ function ParcelaView() {
     return () => {
       active = false;
     };
-  }, [analysis]);
+  }, [id, parcela]);
 
   const soilCards = [
     { label: 'pH tal', value: formatNumber(soil.ph, 1), sub: 'Optimalno: 6.0-7.5', icon: FlaskConical, ok: soil.ph == null || (soil.ph >= 6 && soil.ph <= 7.5) },
@@ -803,7 +803,7 @@ function ParcelaView() {
             <div className={styles.chartPanel}>
               <div className={styles.chartHeader}>
                 <div>
-                  <p className={styles.chartTitle}>Največ pridelano v regiji</p>
+                  <p className={styles.chartTitle}>Najvišji donos v regiji</p>
                   <p className={styles.chartSub}>
                     {topCrops ? `${topCrops.region}, ${topCrops.year} · vir: ${topCrops.source}` : 'Nalagam podatke SURS ...'}
                   </p>
