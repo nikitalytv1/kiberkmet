@@ -1,3 +1,5 @@
+import { fetchWithAuth } from './fetchWithAuth';
+
 export interface TopCrop {
   code: string;
   name: string;
@@ -9,15 +11,37 @@ export interface TopCropsResponse {
   table: string;
   year: string | null;
   region: string;
+  regionCode?: string;
+  location?: {
+    lon: number;
+    lat: number;
+    nutsId?: string;
+    regionName?: string;
+    source: string;
+  } | null;
   unit: string;
   crops: TopCrop[];
 }
 
-export async function getRegionalTopCrops(lon?: number | null): Promise<TopCropsResponse> {
+export async function getRegionalTopCrops(options?: {
+  lon?: number | null;
+  parcelaId?: string | null;
+}): Promise<TopCropsResponse> {
+  if (options?.parcelaId) {
+    const res = await fetchWithAuth(`/api/statistics/top-crops/parcela/${options.parcelaId}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Napaka pri nalaganju SURS podatkov.');
+    }
+
+    return data;
+  }
+
   const params = new URLSearchParams();
 
-  if (lon != null) {
-    params.set('lon', String(lon));
+  if (options?.lon != null) {
+    params.set('lon', String(options.lon));
   }
 
   const suffix = params.toString() ? `?${params.toString()}` : '';

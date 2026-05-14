@@ -7,6 +7,7 @@ import RegistrationView from "./views/auth/RegistrationView";
 import AppLayout from "./layouts/AppLayout";
 import DashboardView from "./views/dashboard/DashboardView";
 import ParcelaView from "./views/dashboard/ParcelaView";
+import RegionDashboardView from "./views/dashboard/RegionDashboardView";
 import MapView from "./views/map/MapView";
 import SettingsLayout from "./views/settings/SettingsLayout";
 import SecurityTab from "./views/settings/SecurityTab";
@@ -44,6 +45,10 @@ function App() {
             <Route path="dashboard">
               <Route index element={<DashboardView />} />
               <Route path=":id" element={<ParcelaView />} />
+            </Route>
+            <Route path="regions">
+              <Route index element={<Navigate to="08" />} />
+              <Route path=":regionCode" element={<RegionDashboardView />} />
             </Route>
             <Route path="map" element={<MapView />} />
 

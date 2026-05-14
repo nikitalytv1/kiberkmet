@@ -6,6 +6,7 @@ export interface ParcelaItem {
   color: string;
   kultura?: string;
   area?: string;
+  owner?: string | null;
   ph?: number | null;
   vlaga?: number | null;
   tip_tal?: string | null;
@@ -13,10 +14,14 @@ export interface ParcelaItem {
   statusLabel?: string;
 }
 
-export function ParcelaCard({ parcela, onClick }: { parcela: ParcelaItem; onClick: () => void }) {
+export function ParcelaCard({ parcela, onClick }: { parcela: ParcelaItem; onClick?: () => void }) {
   const dash = '—';
   return (
-    <div className={styles.parcelaCard} onClick={onClick}>
+    <div
+      className={styles.parcelaCard}
+      onClick={onClick}
+      style={!onClick ? { cursor: 'default' } : undefined}
+    >
       <div className={styles.colorBar} style={{ backgroundColor: parcela.color }} />
       <div className={styles.cardBody}>
         <div className={styles.cardHeader}>
@@ -32,6 +37,12 @@ export function ParcelaCard({ parcela, onClick }: { parcela: ParcelaItem; onClic
           <span>{parcela.area ?? dash}</span>
           <span className={styles.dot} />
           <span>{parcela.kultura ?? dash}</span>
+          {parcela.owner ? (
+            <>
+              <span className={styles.dot} />
+              <span>{parcela.owner}</span>
+            </>
+          ) : null}
         </div>
 
         <div className={styles.miniGrid}>

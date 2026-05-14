@@ -1,11 +1,12 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { Map, Layers, Settings, LogOut } from 'lucide-react';
+import { Map, Layers, Settings, LogOut, ChartNoAxesCombined } from 'lucide-react';
 import styles from './AppLayout.module.css';
 import { useAuth } from '../context/AuthContext';
 
 const navItems = [
   { label: 'Zemljevid', icon: Map, to: '/map' },
   { label: 'Moje parcele', icon: Layers, to: '/dashboard' },
+  { label: 'Regije', icon: ChartNoAxesCombined, to: '/regions' },
   { label: 'Nastavitve', icon: Settings, to: '/settings' },
 ];
 
