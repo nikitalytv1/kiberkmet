@@ -118,36 +118,192 @@ const CROPS = [
     icon: '🌾',
     season: 'Okt - Nov',
     yield: '5.2 t/ha',
+    uses: ['Njiva'],
     ph: [6, 7.5],
     clay: [10, 35],
     nitrogen: [1.2, 3],
+    temp: [3, 18],
+    precipitationMax: 65,
   },
   {
     name: 'Ječmen',
     icon: '🌿',
     season: 'Mar - Apr',
     yield: '4.1 t/ha',
+    uses: ['Njiva'],
     ph: [6.2, 7.6],
     clay: [8, 32],
     nitrogen: [1, 2.8],
+    temp: [4, 20],
+    precipitationMax: 60,
   },
   {
     name: 'Koruza',
     icon: '🌽',
     season: 'Apr - Maj',
     yield: '8.7 t/ha',
+    uses: ['Njiva'],
     ph: [5.8, 7.2],
     clay: [12, 40],
     nitrogen: [1.4, 3.5],
+    temp: [12, 26],
+    precipitationMax: 55,
   },
   {
     name: 'Sončnica',
     icon: '🌻',
     season: 'Apr - Maj',
     yield: '3.0 t/ha',
+    uses: ['Njiva'],
     ph: [6, 7.8],
     clay: [8, 30],
     nitrogen: [0.8, 2.4],
+    temp: [10, 25],
+    precipitationMax: 50,
+  },
+  {
+    name: 'Krompir',
+    icon: '🥔',
+    season: 'Mar - Apr',
+    yield: '25 t/ha',
+    uses: ['Njiva', 'Vrt'],
+    ph: [5.2, 6.5],
+    clay: [5, 28],
+    nitrogen: [1.2, 3.2],
+    temp: [7, 20],
+    precipitationMax: 55,
+  },
+  {
+    name: 'Fižol',
+    icon: '🫘',
+    season: 'Maj - Jun',
+    yield: '2.4 t/ha',
+    uses: ['Njiva', 'Vrt'],
+    ph: [6, 7.5],
+    clay: [8, 30],
+    nitrogen: [0.8, 2.4],
+    temp: [12, 26],
+    precipitationMax: 45,
+  },
+  {
+    name: 'Solata',
+    icon: '🥬',
+    season: 'Mar - Maj',
+    yield: '18 t/ha',
+    uses: ['Vrt'],
+    ph: [6, 7.2],
+    clay: [8, 32],
+    nitrogen: [1.2, 3],
+    temp: [6, 20],
+    precipitationMax: 55,
+  },
+  {
+    name: 'Paradižnik',
+    icon: '🍅',
+    season: 'Maj',
+    yield: '45 t/ha',
+    uses: ['Vrt'],
+    ph: [6, 7],
+    clay: [8, 30],
+    nitrogen: [1.5, 3.5],
+    temp: [14, 28],
+    precipitationMax: 45,
+  },
+  {
+    name: 'Laški rizling',
+    icon: '🍇',
+    season: 'Apr - Maj',
+    yield: '8 t/ha',
+    uses: ['Vinograd'],
+    ph: [6, 7.8],
+    clay: [8, 35],
+    nitrogen: [0.8, 2.3],
+    temp: [10, 26],
+    precipitationMax: 45,
+  },
+  {
+    name: 'Sauvignon',
+    icon: '🍇',
+    season: 'Apr - Maj',
+    yield: '7 t/ha',
+    uses: ['Vinograd'],
+    ph: [6, 7.5],
+    clay: [8, 32],
+    nitrogen: [0.8, 2.2],
+    temp: [10, 25],
+    precipitationMax: 45,
+  },
+  {
+    name: 'Jablana',
+    icon: '🍎',
+    season: 'Nov - Mar',
+    yield: '35 t/ha',
+    uses: ['Sadovnjak'],
+    ph: [6, 7],
+    clay: [8, 32],
+    nitrogen: [1, 2.8],
+    temp: [2, 18],
+    precipitationMax: 65,
+  },
+  {
+    name: 'Sliva',
+    icon: '🟣',
+    season: 'Nov - Mar',
+    yield: '18 t/ha',
+    uses: ['Sadovnjak'],
+    ph: [6, 7.5],
+    clay: [8, 35],
+    nitrogen: [1, 2.6],
+    temp: [2, 20],
+    precipitationMax: 65,
+  },
+  {
+    name: 'Lucerna',
+    icon: '🌿',
+    season: 'Mar - Apr',
+    yield: '12 t/ha',
+    uses: ['Travnik'],
+    ph: [6.2, 7.8],
+    clay: [10, 38],
+    nitrogen: [0.8, 2.5],
+    temp: [5, 22],
+    precipitationMax: 60,
+  },
+  {
+    name: 'Travna mešanica',
+    icon: '🌱',
+    season: 'Mar - Sep',
+    yield: '9 t/ha',
+    uses: ['Travnik'],
+    ph: [5.8, 7.4],
+    clay: [8, 40],
+    nitrogen: [0.8, 2.6],
+    temp: [5, 24],
+    precipitationMax: 70,
+  },
+  {
+    name: 'Smreka',
+    icon: '🌲',
+    season: 'Okt - Apr',
+    yield: 'gozdna sadika',
+    uses: ['Gozd'],
+    ph: [4.5, 6.5],
+    clay: [5, 35],
+    nitrogen: [0.6, 2.2],
+    temp: [0, 18],
+    precipitationMax: 75,
+  },
+  {
+    name: 'Bukev',
+    icon: '🌳',
+    season: 'Okt - Apr',
+    yield: 'gozdna sadika',
+    uses: ['Gozd'],
+    ph: [5.5, 7.5],
+    clay: [8, 40],
+    nitrogen: [0.7, 2.4],
+    temp: [0, 20],
+    precipitationMax: 75,
   },
 ];
 
@@ -252,16 +408,42 @@ function scoreRange(value: number | null, min: number, max: number) {
   return Math.max(45, Math.round(100 - (distance / tolerance) * 55));
 }
 
-function getCropScores(soil: SoilValues) {
-  return CROPS.map(crop => {
+function getWeatherScore(weather: WeatherDay[], crop: typeof CROPS[number]) {
+  if (weather.length === 0) return 72;
+
+  const nextDays = weather.slice(0, 3);
+  const avgTemp = nextDays.reduce((sum, day) => (
+    sum + ((day.minTemp + day.maxTemp) / 2)
+  ), 0) / nextDays.length;
+  const maxPrecipitation = Math.max(...nextDays.map(day => day.precipitation));
+
+  const temperatureScore = scoreRange(avgTemp, crop.temp[0], crop.temp[1]);
+  const rainScore = maxPrecipitation <= crop.precipitationMax
+    ? 100
+    : Math.max(40, 100 - (maxPrecipitation - crop.precipitationMax));
+
+  return Math.round((temperatureScore * 0.65) + (rainScore * 0.35));
+}
+
+function getCropsForLandUse(typeOfUse?: string | number | null) {
+  const normalizedType = String(typeOfUse || '').trim();
+  const matchingCrops = CROPS.filter(crop => crop.uses.includes(normalizedType));
+
+  return matchingCrops.length > 0 ? matchingCrops : CROPS;
+}
+
+function getCropScores(soil: SoilValues, weather: WeatherDay[], typeOfUse?: string | number | null) {
+  return getCropsForLandUse(typeOfUse).map(crop => {
+    const weatherScore = getWeatherScore(weather, crop);
     const values = [
       scoreRange(soil.ph, crop.ph[0], crop.ph[1]),
       scoreRange(soil.clay, crop.clay[0], crop.clay[1]),
       scoreRange(soil.nitrogen, crop.nitrogen[0], crop.nitrogen[1]),
+      weatherScore,
     ];
     const score = Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
 
-    return { ...crop, score };
+    return { ...crop, score, weatherScore };
   }).sort((a, b) => b.score - a.score);
 }
 
@@ -287,7 +469,10 @@ function ParcelaView() {
 
   const center = useMemo(() => (parcela ? getCenter(parcela.pts) : null), [parcela]);
   const soil = useMemo(() => getSoilValuesFromAnalysis(analysis), [analysis]);
-  const cropScores = useMemo(() => getCropScores(soil), [soil]);
+  const cropScores = useMemo(() => (
+    getCropScores(soil, weather, parcela?.typeOfUse)
+  ), [soil, weather, parcela?.typeOfUse]);
+  const analysisPending = soilLoading && !analysis;
 
   const soilComposition = useMemo(() => [
     { label: 'Pesek', value: soil.sand, color: '#d6a85b' },
@@ -393,6 +578,11 @@ function ParcelaView() {
         if (!active) return;
         setParcela(data);
         setAnalysis(data.analysis ?? null);
+        if (!data.analysis) {
+          setSoilLoading(true);
+        } else {
+          setSoilLoading(false);
+        }
       })
       .catch(err => {
         if (!active) return;
@@ -482,12 +672,12 @@ function ParcelaView() {
   }, [analysis]);
 
   const soilCards = [
-    { label: 'pH tal', value: formatNumber(soil.ph, 1), sub: 'optimalno 6.0-7.5', icon: FlaskConical, ok: soil.ph == null || (soil.ph >= 6 && soil.ph <= 7.5) },
-    { label: 'CEC', value: formatNumber(soil.cec, 1), sub: 'cmol(c)/kg', icon: FlaskConical, ok: true },
-    { label: 'Dušik (N)', value: `${formatNumber(soil.nitrogen, 2)} g/kg`, sub: 'chemical property', icon: Leaf, ok: soil.nitrogen == null || soil.nitrogen >= 1 },
-    { label: 'Org. ogljik', value: `${formatNumber(soil.organicCarbon, 1)} g/kg`, sub: 'chemical property', icon: Sprout, ok: soil.organicCarbon == null || soil.organicCarbon >= 10 },
-    { label: 'Glina', value: `${formatNumber(soil.clay, 0)}%`, sub: 'tekstura tal', icon: Droplets, ok: soil.clay == null || soil.clay <= 35 },
-    { label: 'Pesek', value: `${formatNumber(soil.sand, 0)}%`, sub: 'tekstura tal', icon: Droplets, ok: true },
+    { label: 'pH tal', value: formatNumber(soil.ph, 1), sub: 'Optimalno: 6.0-7.5', icon: FlaskConical, ok: soil.ph == null || (soil.ph >= 6 && soil.ph <= 7.5) },
+    { label: 'CEC', value: formatNumber(soil.cec, 1), sub: 'Optimalno: 10-25 cmol(c)/kg', icon: FlaskConical, ok: soil.cec == null || (soil.cec >= 10 && soil.cec <= 25) },
+    { label: 'Dušik (N)', value: `${formatNumber(soil.nitrogen, 2)} g/kg`, sub: 'Optimalno: 1.0-3.0 g/kg', icon: Leaf, ok: soil.nitrogen == null || (soil.nitrogen >= 1 && soil.nitrogen <= 3) },
+    { label: 'Org. ogljik', value: `${formatNumber(soil.organicCarbon, 1)} g/kg`, sub: 'Optimalno: nad 10 g/kg', icon: Sprout, ok: soil.organicCarbon == null || soil.organicCarbon >= 10 },
+    { label: 'Glina', value: `${formatNumber(soil.clay, 0)}%`, sub: 'Optimalno: 10-35%', icon: Droplets, ok: soil.clay == null || (soil.clay >= 10 && soil.clay <= 35) },
+    { label: 'Pesek', value: `${formatNumber(soil.sand, 0)}%`, sub: 'Optimalno: 20-60%', icon: Droplets, ok: soil.sand == null || (soil.sand >= 20 && soil.sand <= 60) },
   ];
 
   if (loading) {
@@ -525,23 +715,35 @@ function ParcelaView() {
       <div className={styles.detailLayout}>
         <div>
           <section className={styles.analysisPanel}>
-            {soilLoading && <p className={styles.panelNotice}>Nalagam SoilGrids vrednosti ...</p>}
-            {soilError && <p className={styles.panelNotice}>{soilError}</p>}
-            <div className={styles.soilGrid}>
-              {soilCards.map(({ label, value, sub, icon: Icon, ok }) => (
-                <div key={label} className={styles.soilCard}>
-                  <div className={styles.soilCardHeader}>
-                    <span className={styles.soilLabel}>{label}</span>
-                    <span className={ok ? styles.statusDotOk : styles.statusDotWarn} />
-                  </div>
-                  <div className={styles.soilValueRow}>
-                    <Icon size={18} />
-                    <p className={styles.soilValue}>{value}</p>
-                  </div>
-                  <p className={styles.soilSub}>{sub}</p>
+            {analysisPending ? (
+              <div className={styles.analysisLoading}>
+                <div className={styles.analysisSpinner} />
+                <div>
+                  <p className={styles.analysisLoadingTitle}>Analiza tal se izvaja ...</p>
+                  <p className={styles.analysisLoadingSub}>Pridobivam SoilGrids podatke za novo parcelo.</p>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <>
+                {soilLoading && <p className={styles.panelNotice}>Osvežujem SoilGrids vrednosti ...</p>}
+                {soilError && <p className={styles.panelNotice}>{soilError}</p>}
+                <div className={styles.soilGrid}>
+                  {soilCards.map(({ label, value, sub, icon: Icon, ok }) => (
+                    <div key={label} className={styles.soilCard}>
+                      <div className={styles.soilCardHeader}>
+                        <span className={styles.soilLabel}>{label}</span>
+                        <span className={ok ? styles.statusDotOk : styles.statusDotWarn} />
+                      </div>
+                      <div className={styles.soilValueRow}>
+                        <Icon size={18} />
+                        <p className={styles.soilValue}>{value}</p>
+                      </div>
+                      <p className={styles.soilSub}>{sub}</p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </section>
 
 
@@ -549,13 +751,17 @@ function ParcelaView() {
             <div className={styles.recommendHeader}>
               <div>
                 <p className={styles.recommendTitle}><Bot size={17} /> AI priporočila — Kaj saditi?</p>
-                <p className={styles.recommendSub}>Glede na pH, teksturo, dušik in organski ogljik</p>
+                <p className={styles.recommendSub}>
+                  {parcela.typeOfUse ? `Pridelki za rabo ${parcela.typeOfUse}` : 'Pridelki glede na vrsto parcele'} · tla in vreme
+                </p>
               </div>
-              <span className={styles.modelBadge}>SoilGrids</span>
+              <span className={styles.modelBadge}>SoilGrids + vreme</span>
             </div>
 
             <div className={styles.compatibilityList}>
-              {cropScores.map(crop => (
+              {analysisPending ? (
+                <p className={styles.panelNotice}>Priporočila bodo vidna takoj, ko se analiza zaključi.</p>
+              ) : cropScores.map(crop => (
                 <div key={crop.name} className={styles.compatibilityRow}>
                   <div className={styles.cropIcon}>{crop.icon}</div>
                   <div className={styles.compatibilityBody}>
@@ -570,6 +776,7 @@ function ParcelaView() {
                       />
                     </div>
                     <p className={styles.cropMeta}><CalendarDays size={13} /> {crop.season} · {crop.yield}</p>
+                    <p className={styles.cropMeta}>Vremenski kriterij: {crop.weatherScore}%</p>
                   </div>
                 </div>
               ))}

@@ -9,7 +9,7 @@ export interface ParcelaItem {
   ph?: number | null;
   vlaga?: number | null;
   tip_tal?: string | null;
-  status?: 'ok' | 'warn' | 'bad';
+  status?: 'ok' | 'warn' | 'bad' | 'pending';
   statusLabel?: string;
 }
 
@@ -22,7 +22,7 @@ export function ParcelaCard({ parcela, onClick }: { parcela: ParcelaItem; onClic
         <div className={styles.cardHeader}>
           <p className={styles.cardName}>{parcela.name}</p>
           {parcela.statusLabel ? (
-            <span className={`${styles.statusBadge} ${parcela.status === 'bad' ? styles.statusBad : parcela.status === 'warn' ? styles.statusWarn : styles.statusOk}`}>
+            <span className={`${styles.statusBadge} ${parcela.status === 'bad' ? styles.statusBad : parcela.status === 'warn' || parcela.status === 'pending' ? styles.statusWarn : styles.statusOk}`}>
               {parcela.statusLabel}
             </span>
           ) : null}

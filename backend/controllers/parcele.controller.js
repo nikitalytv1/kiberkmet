@@ -14,6 +14,8 @@ export function getTypes(_req, res) {
   res.json(LAND_USE_TYPES);
 }
 
+const analysisJobs = new Map();
+
 function isValidPolygon(coordinates) {
   if (!coordinates || typeof coordinates !== 'object') return false;
 
@@ -135,6 +137,118 @@ function getAnalysisCandidates(coordinates, lon, lat) {
       Math.abs(other.lat - point.lat) < 0.000001
     )) === index
   ));
+}
+
+async function runParcelaAnalysis(id, userId) {
+  const jobKey = `${userId}:${id}`;
+
+  if (analysisJobs.has(jobKey)) {
+    return analysisJobs.get(jobKey);
+  }
+
+  const job = (async () => {
+    const parcela = await prisma.$queryRaw`
+      SELECT
+        id,
+        ST_X(ST_PointOnSurface(coordinates)) AS lon,
+        ST_Y(ST_PointOnSurface(coordinates)) AS lat,
+        ST_AsGeoJSON(coordinates)::json AS coordinates
+      FROM "Parcela"
+      WHERE id = ${id} AND "userId" = ${userId}
+    `;
+
+    if (!parcela[0]) {
+      const error = new Error('Parcela not found');
+      error.status = 404;
+      throw error;
+    }
+
+    const lon = Number(parcela[0].lon);
+    const lat = Number(parcela[0].lat);
+
+    const recent = await prisma.$queryRaw`
+      SELECT
+        id,
+        lon,
+        lat,
+        "physicalSoil",
+        "chemicalProperties",
+        "soilClassification",
+        "derivedProperties",
+        "fetchedAt",
+        "parcelaId"
+      FROM "Analiza"
+      WHERE
+        "parcelaId" = ${id} AND
+        "fetchedAt" >= NOW() - INTERVAL '2 minutes'
+      ORDER BY "fetchedAt" DESC
+      LIMIT 1
+    `;
+
+    if (recent[0]) {
+      return recent[0];
+    }
+
+    const candidates = getAnalysisCandidates(parcela[0].coordinates, lon, lat);
+    let soil = null;
+    let sourcePoint = { lon, lat };
+
+    for (const candidate of candidates) {
+      const candidateSoil = await fetchSoilAnalysis(candidate.lon, candidate.lat);
+      soil = candidateSoil;
+      sourcePoint = candidate;
+
+      if (analysisHasData(candidateSoil)) {
+        break;
+      }
+    }
+
+    if (!soil) {
+      throw new Error('Soil analysis failed');
+    }
+
+    const analysis = await prisma.$queryRaw`
+      INSERT INTO "Analiza" (
+        id,
+        lon,
+        lat,
+        "physicalSoil",
+        "chemicalProperties",
+        "soilClassification",
+        "derivedProperties",
+        "fetchedAt",
+        "parcelaId"
+      )
+      VALUES (
+        gen_random_uuid(),
+        ${sourcePoint.lon},
+        ${sourcePoint.lat},
+        CAST(${JSON.stringify(soil.physical)} AS jsonb),
+        CAST(${JSON.stringify(soil.chemical)} AS jsonb),
+        CAST(${JSON.stringify(soil.classification)} AS jsonb),
+        CAST(${JSON.stringify(soil.derived)} AS jsonb),
+        NOW(),
+        ${id}
+      )
+      RETURNING
+        id,
+        lon,
+        lat,
+        "physicalSoil",
+        "chemicalProperties",
+        "soilClassification",
+        "derivedProperties",
+        "fetchedAt",
+        "parcelaId"
+    `;
+
+    return analysis[0];
+  })().finally(() => {
+    analysisJobs.delete(jobKey);
+  });
+
+  analysisJobs.set(jobKey, job);
+  return job;
 }
 
 // GET ALL
@@ -292,6 +406,10 @@ export async function createParcela(req, res) {
         "userId"
     `;
 
+    runParcelaAnalysis(parcela[0].id, userId).catch(err => {
+      console.error('Background soil analysis failed:', err);
+    });
+
     return res.status(201).json(parcela[0]);
   } catch (err) {
     console.error(err);
@@ -424,106 +542,13 @@ export async function analyzeParcela(req, res) {
   const userId = req.user.userId;
 
   try {
-    const parcela = await prisma.$queryRaw`
-      SELECT
-        id,
-        ST_X(ST_PointOnSurface(coordinates)) AS lon,
-        ST_Y(ST_PointOnSurface(coordinates)) AS lat,
-        ST_AsGeoJSON(coordinates)::json AS coordinates
-      FROM "Parcela"
-      WHERE id = ${id} AND "userId" = ${userId}
-    `;
+    const analysis = await runParcelaAnalysis(id, userId);
 
-    if (!parcela[0]) {
-      return res.status(404).json({
-        error: 'Parcela not found'
-      });
-    }
-
-    const lon = Number(parcela[0].lon);
-    const lat = Number(parcela[0].lat);
-
-    const recent = await prisma.$queryRaw`
-      SELECT
-        id,
-        lon,
-        lat,
-        "physicalSoil",
-        "chemicalProperties",
-        "soilClassification",
-        "derivedProperties",
-        "fetchedAt",
-        "parcelaId"
-      FROM "Analiza"
-      WHERE
-        "parcelaId" = ${id} AND
-        "fetchedAt" >= NOW() - INTERVAL '2 minutes'
-      ORDER BY "fetchedAt" DESC
-      LIMIT 1
-    `;
-
-    if (recent[0]) {
-      return res.json(recent[0]);
-    }
-
-    const candidates = getAnalysisCandidates(parcela[0].coordinates, lon, lat);
-    let soil = null;
-    let sourcePoint = { lon, lat };
-
-    for (const candidate of candidates) {
-      const candidateSoil = await fetchSoilAnalysis(candidate.lon, candidate.lat);
-      soil = candidateSoil;
-      sourcePoint = candidate;
-
-      if (analysisHasData(candidateSoil)) {
-        break;
-      }
-    }
-
-    if (!soil) {
-      throw new Error('Soil analysis failed');
-    }
-
-    const analysis = await prisma.$queryRaw`
-      INSERT INTO "Analiza" (
-        id,
-        lon,
-        lat,
-        "physicalSoil",
-        "chemicalProperties",
-        "soilClassification",
-        "derivedProperties",
-        "fetchedAt",
-        "parcelaId"
-      )
-      VALUES (
-        gen_random_uuid(),
-        ${sourcePoint.lon},
-        ${sourcePoint.lat},
-        CAST(${JSON.stringify(soil.physical)} AS jsonb),
-        CAST(${JSON.stringify(soil.chemical)} AS jsonb),
-        CAST(${JSON.stringify(soil.classification)} AS jsonb),
-        CAST(${JSON.stringify(soil.derived)} AS jsonb),
-        NOW(),
-        ${id}
-      )
-      RETURNING
-        id,
-        lon,
-        lat,
-        "physicalSoil",
-        "chemicalProperties",
-        "soilClassification",
-        "derivedProperties",
-        "fetchedAt",
-        "parcelaId"
-    `;
-
-    return res.status(201).json(analysis[0]);
+    return res.status(201).json(analysis);
   } catch (err) {
     console.error(err);
 
-    return res.status(500).json({
+    return res.status(err.status ?? 500).json({
       error: err.message
     });
   }
