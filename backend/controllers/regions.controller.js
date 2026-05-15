@@ -1,13 +1,8 @@
-import express from 'express';
-
 import { prisma } from '../index.js';
-import { requireAuth } from '../middleware/auth.js';
-
-const router = express.Router();
 
 const SURS_YIELD_URL = 'https://pxweb.stat.si/SiStatData/api/v1/en/Data/1502410S.px';
 const NUTS3_GEOJSON_URL = 'https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/NUTS_RG_01M_2024_4326_LEVL_3.geojson';
-const STATISTICAL_REGION_DIMENSION = 'STATISTI\u010cNA REGIJA';
+const STATISTICAL_REGION_DIMENSION = 'STATISTIČNA REGIJA';
 
 const SURS_STATISTICAL_REGION_BY_NUTS = {
   SI031: '01',
@@ -274,11 +269,11 @@ function getSursStatsForParcela(parcela, yieldsByCropCode) {
   return yieldsByCropCode[cropCode] ?? null;
 }
 
-router.get('/', requireAuth, (_req, res) => {
+export function getRegions(_req, res) {
   res.json(STATISTICAL_REGIONS);
-});
+}
 
-router.get('/:regionCode/parcele', requireAuth, async (req, res) => {
+export async function getParceleByRegion(req, res) {
   const regionCode = String(req.params.regionCode).padStart(2, '0');
 
   if (!isValidRegionCode(regionCode)) {
@@ -352,6 +347,4 @@ router.get('/:regionCode/parcele', requireAuth, async (req, res) => {
       error: err.message
     });
   }
-});
-
-export default router;
+}

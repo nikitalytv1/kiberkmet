@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Polygon, Polyline, CircleMarker, MapContainer, TileLayer, Tooltip } from 'react-leaflet';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Polygon, Polyline, CircleMarker, MapContainer, TileLayer, Tooltip, useMapEvents } from 'react-leaflet';
 import styles from './map.module.css';
 import { Point, DrawnPolygon, MARIBOR_CENTER, COLORS } from './types';
 import { saveParcela, getParcele, updateParcela, deleteParcela } from '../../api/parcele';
@@ -13,7 +14,34 @@ import { DeleteConfirmModal }   from './components/DeleteConfirmModal';
 import { ParcelsSidebar }       from './components/ParcelsSidebar';
 import { MapFlyTo }             from './components/MapFlyTo';
 
+const MAP_POSITION_KEY = 'map_position';
+
+function MapPositionSaver() {
+  useMapEvents({
+    moveend(e) {
+      const c = e.target.getCenter();
+      const z = e.target.getZoom();
+      sessionStorage.setItem(MAP_POSITION_KEY, JSON.stringify({ lat: c.lat, lng: c.lng, zoom: z }));
+    },
+  });
+  return null;
+}
+
+function getSavedPosition(): { center: Point; zoom: number } {
+  try {
+    const raw = sessionStorage.getItem(MAP_POSITION_KEY);
+    if (raw) {
+      const { lat, lng, zoom } = JSON.parse(raw);
+      return { center: [lat, lng], zoom };
+    }
+  } catch {}
+  return { center: MARIBOR_CENTER, zoom: 15 };
+}
+
 function MapView() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [initialPosition] = useState(getSavedPosition);
   const [activeTool, setActiveTool]       = useState('move');
   const [choosingColor, setChoosingColor] = useState(false);
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
@@ -40,9 +68,24 @@ function MapView() {
     });
   }, [polygons]);
 
+  const handleRename = useCallback((id: string, name: string) => {
+    const previous = polygons.find(p => p.id === id)?.name;
+    setPolygons(prev => prev.map(p => p.id === id ? { ...p, name } : p));
+
+    updateParcela(id, { name }).catch(err => {
+      console.error('Napaka pri preimenovanju:', err);
+
+      if (previous !== undefined) {
+        setPolygons(prev => prev.map(p => p.id === id ? { ...p, name: previous } : p));
+      }
+    });
+  }, [polygons]);
+
   useEffect(() => {
+    const incomingId = (location.state as { selectedId?: string } | null)?.selectedId ?? null;
     getParcele().then(parcele => {
-      setPolygons(parcele.map(p => ({ id: p.id, pts: p.pts, color: p.color ?? COLORS[0], name: p.name })));
+      setPolygons(parcele.map(p => ({ id: p.id, pts: p.pts, color: p.color ?? COLORS[0], name: p.name, areaHectares: p.areaHectares })));
+      if (incomingId) setSelectedId(incomingId);
     }).catch(err => console.error('Napaka pri nalaganju parcel:', err));
   }, []);
 
@@ -154,17 +197,19 @@ function MapView() {
         selectedId={selectedId}
         onSelect={setSelectedId}
         onColorChange={handleColorChange}
+        onRename={handleRename}
       />
 
       <MapContainer
-        center={MARIBOR_CENTER}
-        zoom={15}
+        center={initialPosition.center}
+        zoom={initialPosition.zoom}
         zoomControl={false}
         doubleClickZoom={false}
         style={{ height: '100%', width: '100%' }}
       >
         <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
 
+        <MapPositionSaver />
         <CoordinatesDisplay />
         <MapInteraction active={activeTool === 'move'} />
         <MapFlyTo selectedId={selectedId} polygons={polygons} />
@@ -197,6 +242,7 @@ function MapView() {
 
         {polygons.map((pg, i) => {
           const hovered = activeTool === 'delete' && hoveredIdx === i;
+          const selected = pg.id === selectedId && !hovered;
           return (
             <Polygon
               key={i}
@@ -204,14 +250,17 @@ function MapView() {
               pathOptions={{
                 color:       hovered ? '#dc2626' : pg.color,
                 fillColor:   hovered ? '#dc2626' : pg.color,
-                fillOpacity: hovered ? 0.4 : 0.15,
-                weight:      hovered ? 3 : 2,
+                fillOpacity: hovered ? 0.4 : selected ? 0.25 : 0.15,
+                weight:      hovered ? 3 : selected ? 4 : 2,
               }}
               eventHandlers={activeTool === 'delete' ? {
                 mouseover: () => setHoveredIdx(i),
                 mouseout:  () => setHoveredIdx(null),
                 click:     () => setDeleteTarget(i),
-              } : {}}
+              } : {
+                click:    () => { if (pg.id) setSelectedId(pg.id); },
+                dblclick: () => { if (pg.id) navigate(`/dashboard/${pg.id}`); },
+              }}
             >
               <Tooltip permanent direction="center" className="polygon-label">
                 {pg.name}

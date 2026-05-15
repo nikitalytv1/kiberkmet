@@ -72,3 +72,26 @@ export async function login(payload: LoginPayload): Promise<AuthUser> {
 export async function logout(): Promise<void> {
   await fetch('/api/users/logout', { method: 'POST' });
 }
+
+export async function changePassword(payload: { currentPassword: string; newPassword: string }): Promise<void> {
+  const { fetchWithAuth } = await import('./fetchWithAuth');
+  const res = await fetchWithAuth('/api/users/me/password', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Napaka pri spremembi gesla.');
+}
+
+export async function updateProfile(payload: { name?: string; email?: string }): Promise<AuthUser> {
+  const { fetchWithAuth } = await import('./fetchWithAuth');
+  const res = await fetchWithAuth('/api/users/me', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Napaka pri posodabljanju profila.');
+  return data as AuthUser;
+}

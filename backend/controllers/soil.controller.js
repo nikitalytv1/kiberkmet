@@ -1,8 +1,4 @@
-import express from 'express';
-
-const router = express.Router();
-
-router.get('/', async (req, res) => {
+export async function getSoil(req, res) {
   try {
     const { lat, lon } = req.query;
 
@@ -65,6 +61,4 @@ router.get('/', async (req, res) => {
       error: err.message
     });
   }
-});
-
-export default router;
+}
