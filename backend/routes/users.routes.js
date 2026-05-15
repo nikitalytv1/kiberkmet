@@ -7,6 +7,8 @@ import {
   loginUser,
   refreshToken,
   updateUser,
+  updateMe,
+  changePassword,
   deleteUser,
   logoutUser,
 } from "../controllers/users.controller.js";
@@ -21,6 +23,8 @@ router.post("/refresh", refreshToken);
 
 // Zaščiteni routi
 router.get("/me", requireAuth, getMe);
+router.put("/me", requireAuth, updateMe);
+router.put("/me/password", requireAuth, changePassword);
 router.get("/", requireAuth, getUsers);
 router.put("/:id", requireAuth, updateUser);
 router.delete("/:id", requireAuth, deleteUser);

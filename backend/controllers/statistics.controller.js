@@ -1,9 +1,4 @@
-import express from 'express';
-
 import { prisma } from '../index.js';
-import { requireAuth } from '../middleware/auth.js';
-
-const router = express.Router();
 
 const TABLE_URL = 'https://pxweb.stat.si/SiStatData/api/v1/en/Data/1502410S.px';
 const NUTS3_GEOJSON_URL = 'https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/NUTS_RG_01M_2024_4326_LEVL_3.geojson';
@@ -54,8 +49,6 @@ const STATISTICAL_REGION_NAMES = {
   '12': 'Obalno-kraska'
 };
 
-let sloveniaNuts3GeojsonPromise = null;
-
 const CROP_NAME_SL = {
   'Wheat and spelt': 'Pšenica in pira',
   Barley: 'Ječmen',
@@ -80,6 +73,8 @@ const CROP_NAME_SL = {
   Olives: 'Oljke',
   'Peaches and nectarines from intensive orchards': 'Breskve in nektarine'
 };
+
+let sloveniaNuts3GeojsonPromise = null;
 
 function getStatisticalRegionName(code) {
   return STATISTICAL_REGION_NAMES[String(code)] ?? String(code);
@@ -261,7 +256,7 @@ async function getTopCropsResponse(regionCode, regionLocation = null) {
   };
 }
 
-router.get('/top-crops', async (req, res) => {
+export async function getTopCrops(req, res) {
   try {
     const regionCode = req.query.region ?? '0';
 
@@ -273,9 +268,9 @@ router.get('/top-crops', async (req, res) => {
       error: err.message
     });
   }
-});
+}
 
-router.get('/top-crops/parcela/:id', requireAuth, async (req, res) => {
+export async function getTopCropsByParcela(req, res) {
   try {
     const region = await getRegionFromParcela(req.params.id, req.user.userId);
 
@@ -299,6 +294,4 @@ router.get('/top-crops/parcela/:id', requireAuth, async (req, res) => {
       error: err.message
     });
   }
-});
-
-export default router;
+}

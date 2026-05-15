@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Bot, CalendarDays, Droplets, FlaskConical, Leaf, Sprout } from 'lucide-react';
-import { MapContainer, TileLayer, CircleMarker, Tooltip as LeafletTooltip } from 'react-leaflet';
-import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, Bot, CalendarDays, Droplets, FlaskConical, Leaf, Pencil, Sprout } from 'lucide-react';
+import { MapContainer, TileLayer, Polygon } from 'react-leaflet';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
   ArcElement,
   BarElement,
@@ -12,7 +12,7 @@ import {
   Tooltip,
 } from 'chart.js';
 import { Bar, Pie } from 'react-chartjs-2';
-import { analyzeParcela, getParcela, ParcelaAnalysis } from '../../api/parcele';
+import { analyzeParcela, getParcela, updateParcela, ParcelaAnalysis } from '../../api/parcele';
 import { getRegionalTopCrops, TopCropsResponse } from '../../api/statistics';
 import { Point } from '../map/types';
 import styles from './dashboard.module.css';
@@ -455,6 +455,7 @@ function qualityClass(score: number) {
 
 function ParcelaView() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [parcela, setParcela] = useState<ParcelaDetails | null>(null);
   const [analysis, setAnalysis] = useState<ParcelaAnalysis | null>(null);
   const [soilLoading, setSoilLoading] = useState(false);
@@ -466,6 +467,8 @@ function ParcelaView() {
 
   const [weather, setWeather] = useState<WeatherDay[]>([]);
   const [weatherLoading, setWeatherLoading] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState('');
 
   const center = useMemo(() => (parcela ? getCenter(parcela.pts) : null), [parcela]);
   const soil = useMemo(() => getSoilValuesFromAnalysis(analysis), [analysis]);
@@ -702,9 +705,57 @@ function ParcelaView() {
       <div className={styles.detailHeader}>
         <Link to="/dashboard" className={styles.backLink}><ArrowLeft size={16} /> Nazaj</Link>
         <div className={styles.detailHeaderDivider} />
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <p className={styles.detailEyebrow}>Analiza tal</p>
-          <h1 className={styles.title}>{parcela.name}</h1>
+          <div className={styles.detailTitleRow}>
+            {editingName ? (
+              <input
+                autoFocus
+                className={styles.detailTitleInput}
+                value={nameValue}
+                onChange={e => setNameValue(e.target.value)}
+                onBlur={() => {
+                  const trimmed = nameValue.trim();
+                  if (trimmed && trimmed !== parcela.name) {
+                    setParcela(prev => prev ? { ...prev, name: trimmed } : prev);
+                    updateParcela(parcela.id, { name: trimmed }).catch(() =>
+                      setParcela(prev => prev ? { ...prev, name: parcela.name } : prev)
+                    );
+                  }
+                  setEditingName(false);
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') e.currentTarget.blur();
+                  if (e.key === 'Escape') { setEditingName(false); }
+                }}
+              />
+            ) : (
+              <>
+                <h1 className={styles.title}>{parcela.name}</h1>
+                <button className={styles.detailRenameBtn} onClick={() => { setNameValue(parcela.name); setEditingName(true); }}>
+                  <Pencil size={13} />
+                </button>
+              </>
+            )}
+            <label className={styles.detailColorPicker} title="Spremeni barvo">
+              <span className={styles.detailColorSwatch} style={{ backgroundColor: parcela.color ?? '#10b981' }} />
+              <input
+                type="color"
+                value={parcela.color ?? '#10b981'}
+                className={styles.detailColorInput}
+                onChange={e => {
+                  const color = e.target.value;
+                  setParcela(prev => prev ? { ...prev, color } : prev);
+                }}
+                onBlur={e => {
+                  const color = e.target.value;
+                  updateParcela(parcela.id, { color }).catch(() =>
+                    setParcela(prev => prev ? { ...prev, color: parcela.color } : prev)
+                  );
+                }}
+              />
+            </label>
+          </div>
           <p className={styles.detailSub}>
             SoilGrids · {analysis?.fetchedAt ? new Intl.DateTimeFormat('sl-SI', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(analysis.fetchedAt)) : 'analiza se izvaja'}
             {analysis && ` · ${analysis.lat.toFixed(5)}, ${analysis.lon.toFixed(5)}`}
@@ -757,6 +808,42 @@ function ParcelaView() {
           </section>
 
 
+          <section className={styles.chartGrid} style={{ marginTop: 24 }}>
+            <div className={styles.chartPanel}>
+              <div className={styles.chartHeader}>
+                <div>
+                  <p className={styles.chartTitle}>Sestava tal</p>
+                  <p className={styles.chartSub}>Pesek, melj in glina po SoilGrids</p>
+                </div>
+              </div>
+              <div className={styles.chartBox}>
+                {soilComposition.length > 0 ? (
+                  <Pie data={soilChartData} options={chartOptions} />
+                ) : (
+                  <p className={styles.panelNotice}>Ni dovolj podatkov za graf sestave tal.</p>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.chartPanel}>
+              <div className={styles.chartHeader}>
+                <div>
+                  <p className={styles.chartTitle}>Najvišji donos v regiji</p>
+                  <p className={styles.chartSub}>
+                    {topCrops ? `${topCrops.region}, ${topCrops.year} · vir: ${topCrops.source}` : 'Nalagam podatke SURS ...'}
+                  </p>
+                </div>
+              </div>
+              <div className={styles.chartBox}>
+                {topCrops?.crops.length ? (
+                  <Bar data={cropChartData} options={barOptions} />
+                ) : (
+                  <p className={styles.panelNotice}>{topCropsError ?? 'Ni podatkov za regijo.'}</p>
+                )}
+              </div>
+            </div>
+          </section>
+
           <section className={styles.recommendPanel} style={{ marginTop: 24 }}>
             <div className={styles.recommendHeader}>
               <div>
@@ -794,42 +881,6 @@ function ParcelaView() {
                   </div>
                 </div>
               ))}
-            </div>
-          </section>
-
-          <section className={styles.chartGrid} style={{ marginTop: 24 }}>
-            <div className={styles.chartPanel}>
-              <div className={styles.chartHeader}>
-                <div>
-                  <p className={styles.chartTitle}>Sestava tal</p>
-                  <p className={styles.chartSub}>Pesek, melj in glina po SoilGrids</p>
-                </div>
-              </div>
-              <div className={styles.chartBox}>
-                {soilComposition.length > 0 ? (
-                  <Pie data={soilChartData} options={chartOptions} />
-                ) : (
-                  <p className={styles.panelNotice}>Ni dovolj podatkov za graf sestave tal.</p>
-                )}
-              </div>
-            </div>
-
-            <div className={styles.chartPanel}>
-              <div className={styles.chartHeader}>
-                <div>
-                  <p className={styles.chartTitle}>Najvišji donos v regiji</p>
-                  <p className={styles.chartSub}>
-                    {topCrops ? `${topCrops.region}, ${topCrops.year} · vir: ${topCrops.source}` : 'Nalagam podatke SURS ...'}
-                  </p>
-                </div>
-              </div>
-              <div className={styles.chartBox}>
-                {topCrops?.crops.length ? (
-                  <Bar data={cropChartData} options={barOptions} />
-                ) : (
-                  <p className={styles.panelNotice}>{topCropsError ?? 'Ni podatkov za regijo.'}</p>
-                )}
-              </div>
             </div>
           </section>
         </div>
@@ -897,28 +948,30 @@ function ParcelaView() {
           </div>
 
           {center && (
-            <div className={styles.locationPanel}>
+            <div className={styles.locationPanel} onClick={() => navigate('/map', { state: { selectedId: id } })} style={{ cursor: 'pointer' }}>
               <p className={styles.locationTitle}>Lokacija</p>
               <div className={styles.locationMap}>
                 <MapContainer
-                  center={[center[0], center[1]]}
-                  zoom={12}
+                  bounds={parcela.pts}
+                  boundsOptions={{ padding: [24, 24] }}
                   scrollWheelZoom={false}
+                  doubleClickZoom={false}
+                  touchZoom={false}
                   dragging={false}
                   zoomControl={false}
                   attributionControl={false}
-                  style={{ width: '100%', height: '100%', borderRadius: 10 }}
+                  style={{ width: '100%', height: '100%', borderRadius: 10, pointerEvents: 'none' }}
                 >
                   <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
-                  <CircleMarker
-                    center={[center[0], center[1]]}
-                    radius={8}
-                    pathOptions={{ color: '#ffffff', fillColor: '#10b981', fillOpacity: 1, weight: 3 }}
-                  >
-                    <LeafletTooltip permanent direction="bottom" offset={[0, 10]}>
-                      {parcela.name}
-                    </LeafletTooltip>
-                  </CircleMarker>
+                  <Polygon
+                    positions={parcela.pts}
+                    pathOptions={{
+                      color: parcela.color ?? '#10b981',
+                      fillColor: parcela.color ?? '#10b981',
+                      fillOpacity: 0.25,
+                      weight: 2,
+                    }}
+                  />
                 </MapContainer>
               </div>
               <p className={styles.locationCoords}>

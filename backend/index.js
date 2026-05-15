@@ -5,9 +5,9 @@ const { PrismaClient } = pkg;
 import { PrismaPg } from "@prisma/adapter-pg";
 import userRoutes from "./routes/users.routes.js";
 import parceleRoutes from './routes/parcele.routes.js';
-import soilRoutes from "./routes/soil.js";
-import statisticsRoutes from "./routes/statistics.js";
-import regionRoutes from "./routes/regions.js";
+import soilRoutes from "./routes/soil.routes.js";
+import statisticsRoutes from "./routes/statistics.routes.js";
+import regionRoutes from "./routes/regions.routes.js";
 
 BigInt.prototype.toJSON = function() {
   return this.toString();
