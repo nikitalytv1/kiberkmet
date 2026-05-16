@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Bot, CalendarDays, Droplets, FlaskConical, Leaf, Pencil, Sprout } from 'lucide-react';
+import { ArrowLeft, Bot, CalendarDays, Droplets, FlaskConical, Leaf, Pencil, Plus, Sprout, Trash2 } from 'lucide-react';
 import { MapContainer, TileLayer, Polygon } from 'react-leaflet';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
@@ -12,7 +12,7 @@ import {
   Tooltip,
 } from 'chart.js';
 import { Bar, Pie } from 'react-chartjs-2';
-import { analyzeParcela, getParcela, updateParcela, ParcelaAnalysis } from '../../api/parcele';
+import { analyzeParcela, createCropPlan, deleteCropPlan, getParcela, updateCropPlan, updateParcela, ParcelaAnalysis, CropPlan } from '../../api/parcele';
 import { getRegionalTopCrops, TopCropsResponse } from '../../api/statistics';
 import { Point } from '../map/types';
 import styles from './dashboard.module.css';
@@ -25,8 +25,10 @@ type ParcelaDetails = {
   color: string | null;
   gerk_pid?: string | null;
   typeOfUse?: string | number | null;
+  areaHectares?: number | null;
   pts: Point[];
   analysis?: ParcelaAnalysis | null;
+  cropPlans?: CropPlan[];
 };
 
 type SoilValues = {
@@ -399,13 +401,54 @@ function formatNumber(value: number | null, digits = 1) {
   }).format(value);
 }
 
+function todayInputDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return '-';
+  return new Intl.DateTimeFormat('sl-SI', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(value));
+}
+
+function parseYieldTonsPerHa(value: string) {
+  const match = value.match(/([\d.]+)\s*t\/ha/i);
+  return match ? Number(match[1]) : null;
+}
+
+function formatMassKg(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return '-';
+  if (value >= 1000) return `${formatNumber(value / 1000, 2)} t`;
+  return `${formatNumber(value, 1)} kg`;
+}
+
+function getExpectedHarvestKg(plan: CropPlan, areaHectares?: number | null) {
+  if (!areaHectares) return null;
+  const crop = CROPS.find(item => item.name.toLowerCase() === plan.cropName.toLowerCase());
+  const tonsPerHa = crop ? parseYieldTonsPerHa(crop.yield) : null;
+  if (tonsPerHa == null) return null;
+
+  const plantedAreaHa = areaHectares * (plan.areaPercent / 100);
+  return plantedAreaHa * tonsPerHa * 1000;
+}
+
 function scoreRange(value: number | null, min: number, max: number) {
   if (value == null) return 72;
   if (value >= min && value <= max) return 100;
 
   const tolerance = (max - min) * 0.75;
   const distance = value < min ? min - value : value - max;
-  return Math.max(45, Math.round(100 - (distance / tolerance) * 55));
+  return Math.min(79, Math.max(45, Math.round(100 - (distance / tolerance) * 55)));
+}
+
+function scoreMinimum(value: number | null, min: number) {
+  if (value == null) return 72;
+  if (value >= min) return 100;
+
+  return Math.min(79, Math.max(45, Math.round(100 - ((min - value) / min) * 55)));
 }
 
 function getWeatherScore(weather: WeatherDay[], crop: typeof CROPS[number]) {
@@ -469,6 +512,14 @@ function ParcelaView() {
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState('');
+  const [cropPlans, setCropPlans] = useState<CropPlan[]>([]);
+  const [cropPlanError, setCropPlanError] = useState<string | null>(null);
+  const [cropNameValue, setCropNameValue] = useState('');
+  const [cropPercentValue, setCropPercentValue] = useState('100');
+  const [plantedAmountValue, setPlantedAmountValue] = useState('');
+  const [plantedAmountUnit, setPlantedAmountUnit] = useState<'kg' | 't'>('kg');
+  const [plantingDateValue, setPlantingDateValue] = useState(todayInputDate);
+  const [savingCropPlan, setSavingCropPlan] = useState(false);
 
   const center = useMemo(() => (parcela ? getCenter(parcela.pts) : null), [parcela]);
   const soil = useMemo(() => getSoilValuesFromAnalysis(analysis), [analysis]);
@@ -581,6 +632,8 @@ function ParcelaView() {
         if (!active) return;
         setParcela(data);
         setAnalysis(data.analysis ?? null);
+        setCropPlans(data.cropPlans ?? []);
+        setCropPercentValue(String(Math.max(0, Math.round(100 - (data.cropPlans ?? []).reduce((sum, plan) => sum + Number(plan.areaPercent || 0), 0)))));
         if (!data.analysis) {
           setSoilLoading(true);
         } else {
@@ -678,10 +731,104 @@ function ParcelaView() {
     { label: 'pH tal', value: formatNumber(soil.ph, 1), sub: 'Optimalno: 6.0-7.5', icon: FlaskConical, score: scoreRange(soil.ph, 6, 7.5) },
     { label: 'CEC', value: formatNumber(soil.cec, 1), sub: 'Optimalno: 10-25 cmol(c)/kg', icon: FlaskConical, score: scoreRange(soil.cec, 10, 25) },
     { label: 'Dušik (N)', value: `${formatNumber(soil.nitrogen, 2)} g/kg`, sub: 'Optimalno: 1.0-3.0 g/kg', icon: Leaf, score: scoreRange(soil.nitrogen, 1, 3) },
-    { label: 'Org. ogljik', value: `${formatNumber(soil.organicCarbon, 1)} g/kg`, sub: 'Optimalno: nad 10 g/kg', icon: Sprout, score: scoreRange(soil.organicCarbon, 10, 30) },
+    { label: 'Org. ogljik', value: `${formatNumber(soil.organicCarbon, 1)} g/kg`, sub: 'Optimalno: nad 10 g/kg', icon: Sprout, score: scoreMinimum(soil.organicCarbon, 10) },
     { label: 'Glina', value: `${formatNumber(soil.clay, 0)}%`, sub: 'Optimalno: 10-35%', icon: Droplets, score: scoreRange(soil.clay, 10, 35) },
     { label: 'Pesek', value: `${formatNumber(soil.sand, 0)}%`, sub: 'Optimalno: 20-60%', icon: Droplets, score: scoreRange(soil.sand, 20, 60) },
   ];
+
+  const totalPlannedPercent = cropPlans.reduce((sum, plan) => sum + Number(plan.areaPercent || 0), 0);
+  const remainingPercent = Math.max(0, 100 - totalPlannedPercent);
+  const isFullyPlanted = remainingPercent <= 0;
+
+  async function handleAddCropPlan(e: React.FormEvent) {
+    e.preventDefault();
+    if (!parcela) return;
+
+    const trimmedName = cropNameValue.trim();
+    const percent = Number(cropPercentValue);
+    if (!trimmedName || !Number.isFinite(percent)) {
+      setCropPlanError('Vnesi pridelek in procent površine.');
+      return;
+    }
+
+    if (percent <= 0) {
+      setCropPlanError('Procent pridelka mora biti večji od 0.');
+      return;
+    }
+
+    if (percent > remainingPercent) {
+      setCropPlanError(`Na parceli je prostih samo ${remainingPercent.toFixed(0)}%.`);
+      return;
+    }
+
+    setSavingCropPlan(true);
+    setCropPlanError(null);
+    const plantedAmount = plantedAmountValue === '' ? null : Number(plantedAmountValue);
+    const plantedAmountKg = plantedAmount == null || !Number.isFinite(plantedAmount)
+      ? null
+      : plantedAmountUnit === 't'
+        ? plantedAmount * 1000
+        : plantedAmount;
+
+    try {
+      const saved = await createCropPlan(parcela.id, {
+        cropName: trimmedName,
+        areaPercent: percent,
+        plantedAmountKg,
+        plantingDate: plantingDateValue || null,
+      });
+      let nextPlans: CropPlan[] = [];
+      setCropPlans(prev => {
+        nextPlans = prev.some(plan => plan.id === saved.id)
+          ? prev.map(plan => plan.id === saved.id ? saved : plan)
+          : [saved, ...prev];
+        return nextPlans;
+      });
+      setCropNameValue('');
+      setCropPercentValue(String(Math.max(0, Math.round(100 - nextPlans.reduce((sum, plan) => sum + Number(plan.areaPercent || 0), 0)))));
+      setPlantedAmountValue('');
+      setPlantedAmountUnit('kg');
+      setPlantingDateValue(todayInputDate());
+    } catch (err) {
+      setCropPlanError(err instanceof Error ? err.message : 'Pridelka ni bilo mogoče shraniti.');
+    } finally {
+      setSavingCropPlan(false);
+    }
+  }
+
+  async function handleDeleteCropPlan(planId: string) {
+    if (!parcela) return;
+    const previous = cropPlans;
+    setCropPlans(prev => prev.filter(plan => plan.id !== planId));
+
+    try {
+      await deleteCropPlan(parcela.id, planId);
+    } catch (err) {
+      setCropPlans(previous);
+      setCropPlanError(err instanceof Error ? err.message : 'Pridelka ni bilo mogoče izbrisati.');
+    }
+  }
+
+  async function handleAdjustCropPlan(plan: CropPlan, delta: number) {
+    if (!parcela) return;
+
+    const nextPercent = Math.max(1, Math.min(plan.areaPercent + delta, plan.areaPercent + remainingPercent));
+    if (nextPercent === plan.areaPercent) return;
+
+    const previous = cropPlans;
+    setCropPlans(prev => prev.map(item => (
+      item.id === plan.id ? { ...item, areaPercent: nextPercent } : item
+    )));
+    setCropPlanError(null);
+
+    try {
+      const updated = await updateCropPlan(parcela.id, plan.id, { areaPercent: nextPercent });
+      setCropPlans(prev => prev.map(item => item.id === plan.id ? updated : item));
+    } catch (err) {
+      setCropPlans(previous);
+      setCropPlanError(err instanceof Error ? err.message : 'Procenta ni bilo mogoče posodobiti.');
+    }
+  }
 
   if (loading) {
     return (
@@ -783,7 +930,7 @@ function ParcelaView() {
                     const isOk = score >= 80;
                     const isWarn = score >= 65 && score < 80;
                     const barClass = isOk ? styles.soilCardBarOk : isWarn ? styles.soilCardBarWarn : styles.soilCardBarBad;
-                    const dotClass = isOk ? styles.statusDotOk : styles.statusDotWarn;
+                    const dotClass = isOk ? styles.statusDotOk : isWarn ? styles.statusDotWarn : styles.statusDotBad;
                     return (
                       <div key={label} className={styles.soilCard} style={{ animationDelay: `${idx * 80}ms` }}>
                         <div className={styles.soilCardHeader}>
@@ -844,6 +991,110 @@ function ParcelaView() {
             </div>
           </section>
 
+          <section className={styles.cropPlanPanel} style={{ display: 'none' }}>
+            <div className={styles.cropPlanHeader}>
+              <div>
+                <p className={styles.cropPlanTitle}><Sprout size={17} /> Načrt pridelkov</p>
+                <p className={styles.cropPlanSub}>Določi, kaj boš sadil, kolikšen procent površine zasede in kdaj pričakovati pobiranje.</p>
+              </div>
+              <span className={`${styles.cropPlanTotal} ${isFullyPlanted ? styles.cropPlanTotalFull : ''}`}>
+                {Math.min(totalPlannedPercent, 100).toFixed(0)}% zasedeno · {remainingPercent.toFixed(0)}% prosto
+              </span>
+            </div>
+
+            {isFullyPlanted && (
+              <p className={styles.cropPlanFullNotice}>Parcela je 100% zasedena. Za nov pridelek najprej odstrani ali zmanjša obstoječo rabo.</p>
+            )}
+
+            <form className={styles.cropPlanForm} onSubmit={handleAddCropPlan}>
+              <div className={styles.cropPlanField}>
+                <label>Pridelek</label>
+                <input
+                  className={cropPlanError && !cropNameValue.trim() ? styles.cropPlanInputError : undefined}
+                  list="crop-options-visible"
+                  value={cropNameValue}
+                  disabled={isFullyPlanted}
+                  onChange={e => {
+                    setCropNameValue(e.target.value);
+                    if (cropPlanError) setCropPlanError(null);
+                  }}
+                  placeholder="npr. Koruza"
+                />
+                <datalist id="crop-options-visible">
+                  {CROPS.map(crop => <option key={crop.name} value={crop.name} />)}
+                </datalist>
+              </div>
+              <div className={styles.cropPlanField}>
+                <label>Površina</label>
+                <input
+                  type="number"
+                  min="1"
+                  max={remainingPercent}
+                  step="1"
+                  value={cropPercentValue}
+                  disabled={isFullyPlanted}
+                  onChange={e => {
+                    setCropPercentValue(e.target.value);
+                    if (cropPlanError) setCropPlanError(null);
+                  }}
+                />
+              </div>
+              <div className={styles.cropPlanField}>
+                <label>Datum sajenja</label>
+                <input
+                  type="date"
+                  value={plantingDateValue}
+                  disabled={isFullyPlanted}
+                  onChange={e => setPlantingDateValue(e.target.value)}
+                />
+              </div>
+              <button className={styles.cropPlanAddBtn} type="submit" disabled={savingCropPlan || isFullyPlanted}>
+                <Plus size={15} /> Dodaj
+              </button>
+            </form>
+
+            {cropPlanError && <p className={styles.cropPlanWarning}>{cropPlanError}</p>}
+
+            <div className={styles.cropPlanList}>
+              {cropPlans.length === 0 ? (
+                <p className={styles.panelNotice}>Za to parcelo še ni načrtovanih pridelkov.</p>
+              ) : cropPlans.map(plan => (
+                <div key={plan.id} className={styles.cropPlanRow}>
+                  <div className={styles.cropPlanMain}>
+                    <p className={styles.cropPlanName}>{plan.cropName}</p>
+                    <div className={styles.cropPlanTrack}>
+                      <div className={styles.cropPlanFill} style={{ width: `${Math.max(0, Math.min(100, plan.areaPercent))}%` }} />
+                    </div>
+                  </div>
+                  <div className={styles.cropPlanPercentControl}>
+                    <button
+                      type="button"
+                      title="Zmanjšaj procent"
+                      disabled={plan.areaPercent <= 1}
+                      onClick={() => handleAdjustCropPlan(plan, -1)}
+                    >
+                      -
+                    </button>
+                    <span>{Math.round(plan.areaPercent)}%</span>
+                    <button
+                      type="button"
+                      title="Povečaj procent"
+                      disabled={remainingPercent <= 0}
+                      onClick={() => handleAdjustCropPlan(plan, Math.min(1, remainingPercent))}
+                    >
+                      +
+                    </button>
+                  </div>
+                  <p className={styles.cropPlanDate}>Sajenje<br /><strong>{formatDate(plan.plantingDate)}</strong></p>
+                  <p className={styles.cropPlanDate}>Pobiranje<br /><strong>{formatDate(plan.harvestDate)}</strong></p>
+                  <button className={styles.cropPlanDeleteBtn} title="Izbriši pridelek" onClick={() => handleDeleteCropPlan(plan.id)}>
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+
           <section className={styles.recommendPanel} style={{ marginTop: 24 }}>
             <div className={styles.recommendHeader}>
               <div>
@@ -881,6 +1132,144 @@ function ParcelaView() {
                   </div>
                 </div>
               ))}
+            </div>
+          </section>
+
+          <section className={styles.cropPlanPanel} style={{ marginTop: 24 }}>
+            <div className={styles.cropPlanHeader}>
+              <div>
+                <p className={styles.cropPlanTitle}><Sprout size={17} /> Načrt pridelkov</p>
+                <p className={styles.cropPlanSub}>Po AI predlogih določi pridelek, procent površine, količino sajenja in pričakovani pridelek.</p>
+              </div>
+              <span className={`${styles.cropPlanTotal} ${isFullyPlanted ? styles.cropPlanTotalFull : ''}`}>
+                {Math.min(totalPlannedPercent, 100).toFixed(0)}% zasedeno - {remainingPercent.toFixed(0)}% prosto
+              </span>
+            </div>
+
+            {isFullyPlanted && (
+              <p className={styles.cropPlanFullNotice}>Parcela je 100% zasedena. Za nov pridelek najprej odstrani ali zmanjša obstoječo rabo.</p>
+            )}
+
+            <form className={styles.cropPlanForm} onSubmit={handleAddCropPlan}>
+              <div className={styles.cropPlanField}>
+                <label>Pridelek</label>
+                <input
+                  className={cropPlanError && !cropNameValue.trim() ? styles.cropPlanInputError : undefined}
+                  list="crop-options-plan"
+                  value={cropNameValue}
+                  disabled={isFullyPlanted}
+                  onChange={e => {
+                    setCropNameValue(e.target.value);
+                    if (cropPlanError) setCropPlanError(null);
+                  }}
+                  placeholder="npr. Koruza"
+                />
+                <datalist id="crop-options-plan">
+                  {CROPS.map(crop => <option key={crop.name} value={crop.name} />)}
+                </datalist>
+              </div>
+              <div className={styles.cropPlanField}>
+                <label>Površina</label>
+                <input
+                  type="number"
+                  min="1"
+                  max={remainingPercent}
+                  step="1"
+                  value={cropPercentValue}
+                  disabled={isFullyPlanted}
+                  onChange={e => {
+                    setCropPercentValue(e.target.value);
+                    if (cropPlanError) setCropPlanError(null);
+                  }}
+                />
+              </div>
+              <div className={styles.cropPlanField}>
+                <label>Posejano</label>
+                <div className={styles.cropPlanAmountGroup}>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={plantedAmountValue}
+                    disabled={isFullyPlanted}
+                    onChange={e => setPlantedAmountValue(e.target.value)}
+                    placeholder="0"
+                  />
+                  <select
+                    value={plantedAmountUnit}
+                    disabled={isFullyPlanted}
+                    onChange={e => setPlantedAmountUnit(e.target.value as 'kg' | 't')}
+                  >
+                    <option value="kg">kg</option>
+                    <option value="t">t</option>
+                  </select>
+                </div>
+              </div>
+              <div className={styles.cropPlanField}>
+                <label>Datum sajenja</label>
+                <input
+                  type="date"
+                  value={plantingDateValue}
+                  disabled={isFullyPlanted}
+                  onChange={e => setPlantingDateValue(e.target.value)}
+                />
+              </div>
+              <button className={styles.cropPlanAddBtn} type="submit" disabled={savingCropPlan || isFullyPlanted}>
+                <Plus size={15} /> Dodaj
+              </button>
+            </form>
+
+            {cropPlanError && <p className={styles.cropPlanWarning}>{cropPlanError}</p>}
+
+            <div className={styles.cropPlanList}>
+              {cropPlans.length === 0 ? (
+                <div className={styles.cropPlanEmpty}>
+                  <div className={styles.cropPlanEmptyIcon}>
+                    <Sprout size={22} />
+                  </div>
+                  <div>
+                    <p className={styles.cropPlanEmptyTitle}>Ni še posajenih pridelkov</p>
+                    <p className={styles.cropPlanEmptyText}>Izberi pridelek, določi procent površine in dodaj načrt sajenja za to parcelo.</p>
+                  </div>
+                </div>
+              ) : cropPlans.map(plan => {
+                const expectedHarvestKg = getExpectedHarvestKg(plan, parcela.areaHectares);
+                return (
+                  <div key={plan.id} className={styles.cropPlanRow}>
+                    <div className={styles.cropPlanMain}>
+                      <p className={styles.cropPlanName}>{plan.cropName}</p>
+                      <div className={styles.cropPlanTrack}>
+                        <div className={styles.cropPlanFill} style={{ width: `${Math.max(0, Math.min(100, plan.areaPercent))}%` }} />
+                      </div>
+                    </div>
+                    <div className={styles.cropPlanPercentControl}>
+                      <button
+                        type="button"
+                        title="Zmanjšaj procent"
+                        disabled={plan.areaPercent <= 1}
+                        onClick={() => handleAdjustCropPlan(plan, -1)}
+                      >
+                        -
+                      </button>
+                      <span>{Math.round(plan.areaPercent)}%</span>
+                      <button
+                        type="button"
+                        title="Povečaj procent"
+                        disabled={remainingPercent <= 0}
+                        onClick={() => handleAdjustCropPlan(plan, Math.min(1, remainingPercent))}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <p className={styles.cropPlanDate}>Posejano<br /><strong>{formatMassKg(plan.plantedAmountKg)}</strong></p>
+                    <p className={styles.cropPlanDate}>Pobiranje<br /><strong>{formatDate(plan.harvestDate)}</strong></p>
+                    <p className={styles.cropPlanDate}>Ocena pridelka<br /><strong>{formatMassKg(expectedHarvestKg)}</strong></p>
+                    <button className={styles.cropPlanDeleteBtn} title="Izbriši pridelek" onClick={() => handleDeleteCropPlan(plan.id)}>
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </section>
         </div>

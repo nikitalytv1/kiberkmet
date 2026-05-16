@@ -7,12 +7,27 @@ export interface Parcela {
   color: string | null;
   gerk_pid?: string | null;
   typeOfUse?: string | number | null;
+  plannedCropName?: string | null;
+  plannedCropPercent?: number | string | null;
+  cropPlans?: CropPlan[];
   coordinates: {
     type: string;
     coordinates: number[][][];
   };
   areaHectares?: number | string | null;
   analysis?: ParcelaAnalysis | null;
+}
+
+export interface CropPlan {
+  id: string;
+  cropName: string;
+  areaPercent: number;
+  plantedAmountKg?: number | null;
+  plantingDate: string | null;
+  harvestDate: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  parcelaId?: string;
 }
 
 export interface ParcelaAnalysis {
@@ -49,18 +64,25 @@ export async function getLandUseTypes(): Promise<string[]> {
   return data;
 }
 
-export async function saveParcela(name: string, color: string, pts: Point[], typeOfUse?: string): Promise<Parcela> {
+export async function saveParcela(
+  name: string,
+  color: string,
+  pts: Point[],
+  typeOfUse?: string,
+  plannedCropName?: string | null,
+  plannedCropPercent?: number | null
+): Promise<Parcela> {
   const res = await fetchWithAuth('/api/parcele', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, color, typeOfUse, coordinates: toGeoJSON(pts) }),
+    body: JSON.stringify({ name, color, typeOfUse, plannedCropName, plannedCropPercent, coordinates: toGeoJSON(pts) }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Napaka pri shranjevanju parcele.');
   return data;
 }
 
-export async function getParcele(): Promise<{ id: string; name: string; color: string | null; gerk_pid?: string | null; typeOfUse?: string | number | null; areaHectares?: number | null; pts: Point[]; analysis?: ParcelaAnalysis | null }[]> {
+export async function getParcele(): Promise<{ id: string; name: string; color: string | null; gerk_pid?: string | null; typeOfUse?: string | number | null; plannedCropName?: string | null; plannedCropPercent?: number | null; cropPlans?: CropPlan[]; areaHectares?: number | null; pts: Point[]; analysis?: ParcelaAnalysis | null }[]> {
   const res = await fetchWithAuth('/api/parcele');
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Napaka pri nalaganju parcel.');
@@ -70,13 +92,16 @@ export async function getParcele(): Promise<{ id: string; name: string; color: s
     color: p.color,
     gerk_pid: p.gerk_pid,
     typeOfUse: p.typeOfUse,
+    plannedCropName: p.plannedCropName ?? null,
+    plannedCropPercent: p.plannedCropPercent == null ? null : Number(p.plannedCropPercent),
+    cropPlans: p.cropPlans ?? [],
     areaHectares: p.areaHectares == null ? null : Number(p.areaHectares),
     pts: fromGeoJSON(p.coordinates),
     analysis: p.analysis ?? null,
   }));
 }
 
-export async function getParcela(id: string): Promise<{ id: string; name: string; color: string | null; gerk_pid?: string | null; typeOfUse?: string | number | null; areaHectares?: number | null; pts: Point[]; analysis?: ParcelaAnalysis | null }> {
+export async function getParcela(id: string): Promise<{ id: string; name: string; color: string | null; gerk_pid?: string | null; typeOfUse?: string | number | null; plannedCropName?: string | null; plannedCropPercent?: number | null; cropPlans?: CropPlan[]; areaHectares?: number | null; pts: Point[]; analysis?: ParcelaAnalysis | null }> {
   const res = await fetchWithAuth(`/api/parcele/${id}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Napaka pri nalaganju parcele.');
@@ -86,6 +111,9 @@ export async function getParcela(id: string): Promise<{ id: string; name: string
     color: data.color,
     gerk_pid: data.gerk_pid,
     typeOfUse: data.typeOfUse,
+    plannedCropName: data.plannedCropName ?? null,
+    plannedCropPercent: data.plannedCropPercent == null ? null : Number(data.plannedCropPercent),
+    cropPlans: data.cropPlans ?? [],
     areaHectares: data.areaHectares == null ? null : Number(data.areaHectares),
     pts: fromGeoJSON(data.coordinates),
     analysis: data.analysis ?? null,
@@ -106,6 +134,8 @@ export async function updateParcela(
     color?: string | null;
     gerk_pid?: string | number | null;
     typeOfUse?: string | number | null;
+    plannedCropName?: string | null;
+    plannedCropPercent?: number | null;
     pts?: Point[];
   }
 ): Promise<Parcela> {
@@ -133,5 +163,49 @@ export async function deleteParcela(id: string): Promise<void> {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.error || 'Napaka pri brisanju parcele.');
+  }
+}
+
+export async function getCropPlans(parcelaId: string): Promise<CropPlan[]> {
+  const res = await fetchWithAuth(`/api/parcele/${parcelaId}/crop-plans`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Napaka pri nalaganju nacrta pridelkov.');
+  return data;
+}
+
+export async function createCropPlan(
+  parcelaId: string,
+  payload: { cropName: string; areaPercent: number; plantedAmountKg?: number | null; plantingDate?: string | null; harvestDate?: string | null }
+): Promise<CropPlan> {
+  const res = await fetchWithAuth(`/api/parcele/${parcelaId}/crop-plans`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Napaka pri shranjevanju pridelka.');
+  return data;
+}
+
+export async function updateCropPlan(
+  parcelaId: string,
+  planId: string,
+  payload: Partial<{ cropName: string; areaPercent: number; plantedAmountKg: number | null; plantingDate: string | null; harvestDate: string | null }>
+): Promise<CropPlan> {
+  const res = await fetchWithAuth(`/api/parcele/${parcelaId}/crop-plans/${planId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Napaka pri posodabljanju pridelka.');
+  return data;
+}
+
+export async function deleteCropPlan(parcelaId: string, planId: string): Promise<void> {
+  const res = await fetchWithAuth(`/api/parcele/${parcelaId}/crop-plans/${planId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Napaka pri brisanju pridelka.');
   }
 }

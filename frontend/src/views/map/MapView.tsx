@@ -84,7 +84,16 @@ function MapView() {
   useEffect(() => {
     const incomingId = (location.state as { selectedId?: string } | null)?.selectedId ?? null;
     getParcele().then(parcele => {
-      setPolygons(parcele.map(p => ({ id: p.id, pts: p.pts, color: p.color ?? COLORS[0], name: p.name, areaHectares: p.areaHectares })));
+      setPolygons(parcele.map(p => ({
+        id: p.id,
+        pts: p.pts,
+        color: p.color ?? COLORS[0],
+        name: p.name,
+        areaHectares: p.areaHectares,
+        plannedCropName: p.plannedCropName,
+        plannedCropPercent: p.plannedCropPercent,
+        cropPlans: p.cropPlans,
+      })));
       if (incomingId) setSelectedId(incomingId);
     }).catch(err => console.error('Napaka pri nalaganju parcel:', err));
   }, []);
@@ -243,6 +252,13 @@ function MapView() {
         {polygons.map((pg, i) => {
           const hovered = activeTool === 'delete' && hoveredIdx === i;
           const selected = pg.id === selectedId && !hovered;
+          const cropPlans = pg.cropPlans?.length
+            ? pg.cropPlans
+            : pg.plannedCropName || pg.plannedCropPercent != null
+              ? [{ id: 'legacy', cropName: pg.plannedCropName ?? 'Zasedeno', areaPercent: pg.plannedCropPercent ?? 0 }]
+              : [];
+          const occupiedPercent = Math.max(0, Math.min(100, cropPlans.reduce((sum, plan) => sum + (Number(plan.areaPercent) || 0), 0)));
+          const occupiedFill = selected && occupiedPercent > 0 ? 0.18 + (occupiedPercent / 100) * 0.32 : 0.15;
           return (
             <Polygon
               key={i}
@@ -250,7 +266,7 @@ function MapView() {
               pathOptions={{
                 color:       hovered ? '#dc2626' : pg.color,
                 fillColor:   hovered ? '#dc2626' : pg.color,
-                fillOpacity: hovered ? 0.4 : selected ? 0.25 : 0.15,
+                fillOpacity: hovered ? 0.4 : selected ? Math.max(0.25, occupiedFill) : occupiedFill,
                 weight:      hovered ? 3 : selected ? 4 : 2,
               }}
               eventHandlers={activeTool === 'delete' ? {
@@ -263,7 +279,15 @@ function MapView() {
               }}
             >
               <Tooltip permanent direction="center" className="polygon-label">
-                {pg.name}
+                <div className={styles.polygonTooltip}>
+                  <span>{pg.name}</span>
+                  {selected && cropPlans.map(plan => (
+                    <span key={plan.id}>{plan.cropName} {Number(plan.areaPercent).toFixed(0)}%</span>
+                  ))}
+                  {selected && cropPlans.length > 1 && (
+                    <span>Skupaj {occupiedPercent.toFixed(0)}%</span>
+                  )}
+                </div>
               </Tooltip>
             </Polygon>
           );

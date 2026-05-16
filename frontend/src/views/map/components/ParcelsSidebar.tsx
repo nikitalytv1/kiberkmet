@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Pencil } from 'lucide-react';
+import { Pencil, Search } from 'lucide-react';
 import styles from '../map.module.css';
 import { DrawnPolygon } from '../types';
 
@@ -59,7 +59,7 @@ export function ParcelsSidebar({
         <Search size={13} className={styles.searchIcon} />
         <input
           className={styles.searchInput}
-          placeholder="Išči parcelo..."
+          placeholder="Isci parcelo..."
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -90,9 +90,20 @@ export function ParcelsSidebar({
               ) : (
                 <p className={styles.sidebarItemName}>{p.name ?? ''}</p>
               )}
+
               <p className={styles.sidebarItemArea}>
-                {p.areaHectares != null ? `${p.areaHectares.toFixed(2)} ha` : '—'}
+                {p.areaHectares != null ? `${p.areaHectares.toFixed(2)} ha` : '-'}
               </p>
+
+              <div className={styles.cropSummary}>
+                <span className={styles.cropSummaryText}>
+                  {p.cropPlans?.length
+                    ? p.cropPlans.map(plan => `${plan.cropName} ${Math.round(plan.areaPercent)}%`).join(', ')
+                    : p.plannedCropName || p.plannedCropPercent != null
+                      ? `${p.plannedCropName ?? 'Zasedeno'} ${p.plannedCropPercent ?? 0}%`
+                      : 'Brez pridelkov'}
+                </span>
+              </div>
             </div>
 
             {editingId !== p.id && (

@@ -16,6 +16,24 @@ export function getTypes(_req, res) {
 
 const analysisJobs = new Map();
 
+const CROP_GROWING_DAYS = {
+  'Pšenica': 300,
+  'Psenica': 300,
+  'Ječmen': 120,
+  'Jecmen': 120,
+  'Koruza': 140,
+  'Sončnica': 115,
+  'Sončnica': 115,
+  'Soncnica': 115,
+  'Krompir': 110,
+  'Fižol': 90,
+  'Fizol': 90,
+  'Solata': 55,
+  'Paradižnik': 90,
+  'Paradiznik': 90,
+  'Lucerna': 75,
+};
+
 function isValidPolygon(coordinates) {
   if (!coordinates || typeof coordinates !== 'object') return false;
 
@@ -32,6 +50,114 @@ function toBigIntValue(value) {
     return BigInt(value);
   } catch {
     throw new Error('gerk_pid must be a valid integer');
+  }
+}
+
+function normalizePlannedCropName(value) {
+  if (value == null) return null;
+
+  const trimmed = String(value).trim();
+  return trimmed ? trimmed.slice(0, 100) : null;
+}
+
+function normalizePercent(value, label = 'plannedCropPercent') {
+  if (value == null || value === '') return null;
+
+  const percent = Number(value);
+  if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
+    const error = new Error(`${label} mora biti stevilo med 0 in 100.`);
+    error.status = 400;
+    throw error;
+  }
+
+  return percent;
+}
+
+function normalizeCropPlanPercent(value) {
+  const percent = normalizePercent(value, 'areaPercent');
+
+  if (percent == null || percent <= 0) {
+    const error = new Error('Procent pridelka mora biti vecji od 0.');
+    error.status = 400;
+    throw error;
+  }
+
+  return percent;
+}
+
+function normalizeOptionalPositiveNumber(value, label) {
+  if (value == null || value === '') return null;
+
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) {
+    const error = new Error(`${label} mora biti pozitivno stevilo.`);
+    error.status = 400;
+    throw error;
+  }
+
+  return number;
+}
+
+function normalizeDate(value, label) {
+  if (value == null || value === '') return null;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    const error = new Error(`${label} mora biti veljaven datum.`);
+    error.status = 400;
+    throw error;
+  }
+
+  return date;
+}
+
+function getTodayDate() {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function estimateHarvestDate(cropName, plantingDate) {
+  if (!plantingDate) return null;
+
+  const days = CROP_GROWING_DAYS[cropName] ?? 100;
+  const harvest = new Date(plantingDate);
+  harvest.setDate(harvest.getDate() + days);
+  return harvest;
+}
+
+async function assertParcelaOwner(parcelaId, userId) {
+  const existing = await prisma.$queryRaw`
+    SELECT id
+    FROM "Parcela"
+    WHERE id = ${parcelaId} AND "userId" = ${userId}
+  `;
+
+  if (!existing[0]) {
+    const error = new Error('Parcela not found');
+    error.status = 404;
+    throw error;
+  }
+}
+
+async function assertCropPlanCapacity(parcelaId, areaPercent, excludePlanId = null) {
+  const rows = excludePlanId
+    ? await prisma.$queryRaw`
+        SELECT COALESCE(SUM("areaPercent"), 0) AS total
+        FROM "CropPlan"
+        WHERE "parcelaId" = ${parcelaId} AND id <> ${excludePlanId}
+      `
+    : await prisma.$queryRaw`
+        SELECT COALESCE(SUM("areaPercent"), 0) AS total
+        FROM "CropPlan"
+        WHERE "parcelaId" = ${parcelaId}
+      `;
+
+  const usedPercent = Number(rows[0]?.total ?? 0);
+  if (usedPercent + areaPercent > 100) {
+    const error = new Error(`Na parceli je prostih se ${Math.max(0, 100 - usedPercent).toFixed(0)}%.`);
+    error.status = 400;
+    throw error;
   }
 }
 
@@ -313,6 +439,22 @@ export async function getParcele(req, res) {
         color,
         gerk_pid::text,
         "typeOfUse",
+        "plannedCropName",
+        "plannedCropPercent",
+        (
+          SELECT COALESCE(json_agg(json_build_object(
+            'id', cp.id,
+            'cropName', cp."cropName",
+            'areaPercent', cp."areaPercent",
+            'plantedAmountKg', cp."plantedAmountKg",
+            'plantingDate', cp."plantingDate",
+            'harvestDate', cp."harvestDate",
+            'createdAt', cp."createdAt",
+            'updatedAt', cp."updatedAt"
+          ) ORDER BY cp."createdAt" DESC), '[]'::json)
+          FROM "CropPlan" cp
+          WHERE cp."parcelaId" = "Parcela".id
+        ) AS "cropPlans",
         ST_AsGeoJSON(coordinates)::json AS coordinates,
         ST_Area(coordinates::geography) / 10000 AS "areaHectares",
         "createdAt",
@@ -362,6 +504,22 @@ export async function getParcelaById(req, res) {
         color,
         gerk_pid::text,
         "typeOfUse",
+        "plannedCropName",
+        "plannedCropPercent",
+        (
+          SELECT COALESCE(json_agg(json_build_object(
+            'id', cp.id,
+            'cropName', cp."cropName",
+            'areaPercent', cp."areaPercent",
+            'plantedAmountKg', cp."plantedAmountKg",
+            'plantingDate', cp."plantingDate",
+            'harvestDate', cp."harvestDate",
+            'createdAt', cp."createdAt",
+            'updatedAt', cp."updatedAt"
+          ) ORDER BY cp."createdAt" DESC), '[]'::json)
+          FROM "CropPlan" cp
+          WHERE cp."parcelaId" = "Parcela".id
+        ) AS "cropPlans",
         ST_AsGeoJSON(coordinates)::json AS coordinates,
         ST_Area(coordinates::geography) / 10000 AS "areaHectares",
         "createdAt",
@@ -405,7 +563,7 @@ export async function getParcelaById(req, res) {
 
 // CREATE
 export async function createParcela(req, res) {
-  const { name, color, coordinates, typeOfUse } = req.body;
+  const { name, color, coordinates, typeOfUse, plannedCropName, plannedCropPercent } = req.body;
   const userId = req.user.userId;
   const landUseType = LAND_USE_TYPES.includes(typeOfUse) ? typeOfUse : 'Ostalo';
 
@@ -423,6 +581,8 @@ export async function createParcela(req, res) {
 
   try {
     const geoJson = JSON.stringify(coordinates);
+    const cropName = normalizePlannedCropName(plannedCropName);
+    const cropPercent = normalizePercent(plannedCropPercent);
     await assertNoParcelaOverlap(geoJson, userId);
 
     const parcela = await prisma.$queryRaw`
@@ -431,6 +591,8 @@ export async function createParcela(req, res) {
         name,
         color,
         "typeOfUse",
+        "plannedCropName",
+        "plannedCropPercent",
         coordinates,
         "userId",
         "createdAt",
@@ -441,6 +603,8 @@ export async function createParcela(req, res) {
         ${name},
         ${color ?? null},
         ${landUseType},
+        ${cropName},
+        ${cropPercent},
         ST_SetSRID(ST_GeomFromGeoJSON(${geoJson}), 4326),
         ${userId},
         NOW(),
@@ -452,6 +616,8 @@ export async function createParcela(req, res) {
         color,
         gerk_pid::text,
         "typeOfUse",
+        "plannedCropName",
+        "plannedCropPercent",
         ST_AsGeoJSON(coordinates)::json AS coordinates,
         "createdAt",
         "updatedAt",
@@ -482,6 +648,8 @@ export async function updateParcela(req, res) {
     color,
     gerk_pid,
     typeOfUse,
+    plannedCropName,
+    plannedCropPercent,
     coordinates
   } = req.body;
 
@@ -490,6 +658,8 @@ export async function updateParcela(req, res) {
     color === undefined &&
     gerk_pid === undefined &&
     typeOfUse === undefined &&
+    plannedCropName === undefined &&
+    plannedCropPercent === undefined &&
     coordinates === undefined
   ) {
     return res.status(400).json({
@@ -515,6 +685,14 @@ export async function updateParcela(req, res) {
     const geoJson =
       coordinates !== undefined
         ? JSON.stringify(coordinates)
+        : null;
+    const cropName =
+      plannedCropName !== undefined
+        ? normalizePlannedCropName(plannedCropName)
+        : null;
+    const cropPercent =
+      plannedCropPercent !== undefined
+        ? normalizePercent(plannedCropPercent)
         : null;
 
     if (geoJson) {
@@ -544,6 +722,16 @@ export async function updateParcela(req, res) {
           ELSE "typeOfUse"
         END,
 
+        "plannedCropName" = CASE
+          WHEN ${plannedCropName !== undefined} THEN ${cropName}
+          ELSE "plannedCropName"
+        END,
+
+        "plannedCropPercent" = CASE
+          WHEN ${plannedCropPercent !== undefined} THEN ${cropPercent}
+          ELSE "plannedCropPercent"
+        END,
+
         coordinates = CASE
           WHEN ${coordinates !== undefined} THEN ST_SetSRID(
             ST_GeomFromGeoJSON(${geoJson}),
@@ -562,6 +750,8 @@ export async function updateParcela(req, res) {
         color,
         gerk_pid::text,
         "typeOfUse",
+        "plannedCropName",
+        "plannedCropPercent",
         ST_AsGeoJSON(coordinates)::json AS coordinates,
         ST_Area(coordinates::geography) / 10000 AS "areaHectares",
         "createdAt",
@@ -650,5 +840,206 @@ export async function deleteParcela(req, res) {
     return res.status(500).json({
       error: err.message
     });
+  }
+}
+
+export async function getCropPlans(req, res) {
+  const { id } = req.params;
+  const userId = req.user.userId;
+
+  try {
+    await assertParcelaOwner(id, userId);
+
+    const plans = await prisma.$queryRaw`
+      SELECT
+        id,
+        "cropName",
+        "areaPercent",
+        "plantedAmountKg",
+        "plantingDate",
+        "harvestDate",
+        "createdAt",
+        "updatedAt",
+        "parcelaId"
+      FROM "CropPlan"
+      WHERE "parcelaId" = ${id}
+      ORDER BY "createdAt" DESC
+    `;
+
+    return res.json(plans);
+  } catch (err) {
+    console.error(err);
+    return res.status(err.status ?? 500).json({ error: err.message });
+  }
+}
+
+export async function createCropPlan(req, res) {
+  const { id } = req.params;
+  const userId = req.user.userId;
+  const cropName = normalizePlannedCropName(req.body.cropName);
+  const areaPercent = normalizeCropPlanPercent(req.body.areaPercent);
+  const plantedAmountKg = normalizeOptionalPositiveNumber(req.body.plantedAmountKg, 'plantedAmountKg');
+  const plantingDate = normalizeDate(req.body.plantingDate, 'plantingDate') ?? getTodayDate();
+  const harvestDate = normalizeDate(req.body.harvestDate, 'harvestDate') ?? estimateHarvestDate(cropName, plantingDate);
+
+  if (!cropName || areaPercent == null) {
+    return res.status(400).json({ error: 'cropName in areaPercent sta obvezna.' });
+  }
+
+  try {
+    await assertParcelaOwner(id, userId);
+
+    const existingPlan = await prisma.$queryRaw`
+      SELECT id, "areaPercent", "plantedAmountKg", "plantingDate"
+      FROM "CropPlan"
+      WHERE "parcelaId" = ${id} AND LOWER("cropName") = LOWER(${cropName})
+      LIMIT 1
+    `;
+
+    if (existingPlan[0]) {
+      const nextPercent = Number(existingPlan[0].areaPercent) + areaPercent;
+      const nextPlantedAmountKg = plantedAmountKg == null
+        ? existingPlan[0].plantedAmountKg
+        : Number(existingPlan[0].plantedAmountKg ?? 0) + plantedAmountKg;
+      await assertCropPlanCapacity(id, nextPercent, existingPlan[0].id);
+
+      const mergedPlantingDate = plantingDate ?? existingPlan[0].plantingDate;
+      const mergedHarvestDate = normalizeDate(req.body.harvestDate, 'harvestDate') ?? estimateHarvestDate(cropName, mergedPlantingDate);
+
+      const updated = await prisma.$queryRaw`
+        UPDATE "CropPlan"
+        SET
+          "areaPercent" = ${nextPercent},
+          "plantedAmountKg" = ${nextPlantedAmountKg},
+          "plantingDate" = ${mergedPlantingDate},
+          "harvestDate" = ${mergedHarvestDate},
+          "updatedAt" = NOW()
+        WHERE id = ${existingPlan[0].id} AND "parcelaId" = ${id}
+        RETURNING id, "cropName", "areaPercent", "plantedAmountKg", "plantingDate", "harvestDate", "createdAt", "updatedAt", "parcelaId"
+      `;
+
+      return res.status(200).json(updated[0]);
+    }
+
+    await assertCropPlanCapacity(id, areaPercent);
+
+    const plan = await prisma.$queryRaw`
+      INSERT INTO "CropPlan" (
+        id,
+        "cropName",
+        "areaPercent",
+        "plantedAmountKg",
+        "plantingDate",
+        "harvestDate",
+        "createdAt",
+        "updatedAt",
+        "parcelaId"
+      )
+      VALUES (
+        gen_random_uuid(),
+        ${cropName},
+        ${areaPercent},
+        ${plantedAmountKg},
+        ${plantingDate},
+        ${harvestDate},
+        NOW(),
+        NOW(),
+        ${id}
+      )
+      RETURNING id, "cropName", "areaPercent", "plantedAmountKg", "plantingDate", "harvestDate", "createdAt", "updatedAt", "parcelaId"
+    `;
+
+    return res.status(201).json(plan[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(err.status ?? 500).json({ error: err.message });
+  }
+}
+
+export async function updateCropPlan(req, res) {
+  const { id, planId } = req.params;
+  const userId = req.user.userId;
+  const hasCropName = req.body.cropName !== undefined;
+  const hasAreaPercent = req.body.areaPercent !== undefined;
+  const hasPlantedAmountKg = req.body.plantedAmountKg !== undefined;
+  const hasPlantingDate = req.body.plantingDate !== undefined;
+  const hasHarvestDate = req.body.harvestDate !== undefined;
+
+  if (!hasCropName && !hasAreaPercent && !hasPlantedAmountKg && !hasPlantingDate && !hasHarvestDate) {
+    return res.status(400).json({ error: 'At least one field is required' });
+  }
+
+  try {
+    await assertParcelaOwner(id, userId);
+
+    const cropName = hasCropName ? normalizePlannedCropName(req.body.cropName) : null;
+    let areaPercent = hasAreaPercent ? normalizeCropPlanPercent(req.body.areaPercent) : null;
+    const plantedAmountKg = hasPlantedAmountKg ? normalizeOptionalPositiveNumber(req.body.plantedAmountKg, 'plantedAmountKg') : null;
+    const plantingDate = hasPlantingDate ? normalizeDate(req.body.plantingDate, 'plantingDate') : null;
+    const harvestDate = hasHarvestDate
+      ? normalizeDate(req.body.harvestDate, 'harvestDate')
+      : null;
+
+    if (hasAreaPercent) {
+      await assertCropPlanCapacity(id, areaPercent, planId);
+    } else {
+      const current = await prisma.$queryRaw`
+        SELECT "areaPercent"
+        FROM "CropPlan"
+        WHERE id = ${planId} AND "parcelaId" = ${id}
+      `;
+
+      areaPercent = Number(current[0]?.areaPercent ?? 0);
+    }
+
+    const plan = await prisma.$queryRaw`
+      UPDATE "CropPlan"
+      SET
+        "cropName" = CASE WHEN ${hasCropName} THEN ${cropName} ELSE "cropName" END,
+        "areaPercent" = CASE WHEN ${hasAreaPercent} THEN ${areaPercent} ELSE "areaPercent" END,
+        "plantedAmountKg" = CASE WHEN ${hasPlantedAmountKg} THEN ${plantedAmountKg} ELSE "plantedAmountKg" END,
+        "plantingDate" = CASE WHEN ${hasPlantingDate} THEN ${plantingDate} ELSE "plantingDate" END,
+        "harvestDate" = CASE
+          WHEN ${hasHarvestDate} THEN ${harvestDate}
+          WHEN ${hasCropName || hasPlantingDate} THEN COALESCE(${estimateHarvestDate(cropName, plantingDate)}, "harvestDate")
+          ELSE "harvestDate"
+        END,
+        "updatedAt" = NOW()
+      WHERE id = ${planId} AND "parcelaId" = ${id}
+      RETURNING id, "cropName", "areaPercent", "plantedAmountKg", "plantingDate", "harvestDate", "createdAt", "updatedAt", "parcelaId"
+    `;
+
+    if (!plan[0]) {
+      return res.status(404).json({ error: 'Crop plan not found' });
+    }
+
+    return res.json(plan[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(err.status ?? 500).json({ error: err.message });
+  }
+}
+
+export async function deleteCropPlan(req, res) {
+  const { id, planId } = req.params;
+  const userId = req.user.userId;
+
+  try {
+    await assertParcelaOwner(id, userId);
+
+    const deleted = await prisma.$queryRaw`
+      DELETE FROM "CropPlan"
+      WHERE id = ${planId} AND "parcelaId" = ${id}
+      RETURNING id
+    `;
+
+    if (!deleted[0]) {
+      return res.status(404).json({ error: 'Crop plan not found' });
+    }
+
+    return res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    return res.status(err.status ?? 500).json({ error: err.message });
   }
 }
