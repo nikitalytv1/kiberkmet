@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { Map, Layers, Settings, ChartNoAxesCombined } from 'lucide-react';
 import styles from './AppLayout.module.css';
 import { useAuth } from '../context/AuthContext';
+import { prefetchRegionParcele, prefetchStatisticalRegions } from '../api/regions';
 
 const navItems = [
   { label: 'Zemljevid', icon: Map, to: '/map' },
@@ -23,6 +25,11 @@ function AppLayout() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    prefetchStatisticalRegions();
+    prefetchRegionParcele('08');
+  }, []);
+
   return (
     <div className={styles.wrapper}>
       <aside className={styles.sidebar}>
@@ -36,6 +43,18 @@ function AppLayout() {
             <NavLink
               key={label}
               to={to}
+              onMouseEnter={() => {
+                if (to === '/regions') {
+                  prefetchStatisticalRegions();
+                  prefetchRegionParcele('08');
+                }
+              }}
+              onFocus={() => {
+                if (to === '/regions') {
+                  prefetchStatisticalRegions();
+                  prefetchRegionParcele('08');
+                }
+              }}
               className={({ isActive }) =>
                 `${styles.navLink} ${isActive ? styles.navLinkActive : ''}`
               }

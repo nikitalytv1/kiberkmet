@@ -21,6 +21,8 @@ model Parcela {
   color       String?
   gerk_pid    BigInt?
   typeOfUse   String    @default("Ostalo") @db.VarChar(100)
+  plannedCropName    String?   @db.VarChar(100)
+  plannedCropPercent Float?
   coordinates Unsupported("geometry(Polygon, 4326)")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -30,6 +32,21 @@ model Parcela {
 
   analize     Analiza[]
   pridelki    Pridelek[]
+  cropPlans   CropPlan[]
+}
+
+model CropPlan {
+  id          String   @id @default(uuid())
+  cropName    String   @db.VarChar(100)
+  areaPercent Float
+  plantedAmountKg Float?
+  plantingDate DateTime?
+  harvestDate  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parcelaId   String
+  parcela     Parcela  @relation(fields: [parcelaId], references: [id])
 }
 
 model Analiza {

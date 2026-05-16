@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { MapPinned } from 'lucide-react';
 import styles from './dashboard.module.css';
 import { ParcelaCard, ParcelaItem } from './ParcelaCard';
 import { ParcelaAnalysis } from '../../api/parcele';
-import { getRegionParcele, getStatisticalRegions, StatisticalRegion } from '../../api/regions';
+import { getRegionParcele, getStatisticalRegions, prefetchRegionParcele, StatisticalRegion } from '../../api/regions';
 import { COLORS } from '../map/types';
 import ParcelaBarChart, { BarItem } from './ParcelaBarChart';
 import RabaDonutChart, { DonutSlice } from './RabaDonutChart';
@@ -69,13 +70,13 @@ function getSoilValue(analysis: ParcelaAnalysis | null | undefined, name: string
 function getSoilTextureClass(sand: number | null, silt: number | null, clay: number | null) {
   if (sand == null || silt == null || clay == null) return null;
   if (clay >= 40) return 'Glinena tla';
-  if (sand >= 70) return 'Pescena tla';
+  if (sand >= 70) return 'Peščena tla';
   if (silt >= 70) return 'Meljasta tla';
   if (sand >= 40 && sand <= 60 && clay >= 10 && clay <= 30 && silt >= 20 && silt <= 50) return 'Ilovnata tla';
-  if (sand > 55 && clay < 25) return 'Pesceno-ilovnata tla';
+  if (sand > 55 && clay < 25) return 'Peščeno-ilovnata tla';
   if (clay >= 30 && clay < 40) return 'Glineno-ilovnata tla';
   if (silt >= 50 && clay < 30) return 'Meljasto-ilovnata tla';
-  return 'Mesana tekstura tal';
+  return 'Mešana tekstura tal';
 }
 
 function formatHectares(value: number | null | undefined) {
@@ -103,9 +104,14 @@ function RegionDashboardView() {
 
   useEffect(() => {
     getStatisticalRegions()
-      .then(setRegions)
+      .then(data => {
+        setRegions(data);
+        data.forEach(region => {
+          if (region.code !== normalizedRegionCode) prefetchRegionParcele(region.code);
+        });
+      })
       .catch(err => setError(err.message));
-  }, []);
+  }, [normalizedRegionCode]);
 
   useEffect(() => {
     let active = true;
@@ -117,11 +123,7 @@ function RegionDashboardView() {
         if (!active) return;
 
         setSelectedRegion(data.region);
-        setYieldStats(
-          data.parcele
-            .map(p => p.sursYieldStats)
-            .filter((value): value is SursYieldStats => value != null)
-        );
+        setYieldStats(data.yieldStats ?? []);
         setAreaValues(data.parcele.map(p => p.areaHectares).filter((value): value is number => value != null));
 
         const rabaMap = new Map<string, number>();
@@ -186,9 +188,9 @@ function RegionDashboardView() {
   const phValues = parcele.map(p => p.ph).filter((value): value is number => value != null);
 
   const stats = [
-    { label: 'Skupaj parcel', value: loading ? '-' : String(parcele.length), sub: selectedRegion?.name ?? 'statisticna regija' },
-    { label: 'Skupna povrsina', value: totalArea > 0 ? `${formatNumber(totalArea)} ha` : '-', sub: totalArea > 0 ? 'izrisanih parcel' : 'ni podatka' },
-    { label: 'Povprecni pH', value: phValues.length > 0 ? formatNumber(phValues.reduce((sum, value) => sum + value, 0) / phValues.length) : '-', sub: phValues.length > 0 ? `${phValues.length} analiz` : 'ni podatka' },
+    { label: 'Skupaj parcel', value: loading ? '-' : String(parcele.length), sub: selectedRegion?.name ?? 'statistična regija' },
+    { label: 'Skupna površina', value: totalArea > 0 ? `${formatNumber(totalArea)} ha` : '-', sub: totalArea > 0 ? 'izrisanih parcel' : 'ni podatka' },
+    { label: 'Povprečni pH', value: phValues.length > 0 ? formatNumber(phValues.reduce((sum, value) => sum + value, 0) / phValues.length) : '-', sub: phValues.length > 0 ? `${phValues.length} analiz` : 'ni podatka' },
   ];
 
   const regionOptions = useMemo(() => (
@@ -270,7 +272,17 @@ function RegionDashboardView() {
         {loading ? (
           <p className={styles.empty}>Nalagam parcele v regiji ...</p>
         ) : parcele.length === 0 ? (
-          <p className={styles.empty}>V tej statistični regiji ni parcel.</p>
+          <div className={styles.regionEmptyState}>
+            <div className={styles.regionEmptyIcon}>
+              <MapPinned size={24} />
+            </div>
+            <div>
+              <p className={styles.regionEmptyTitle}>V tej regiji še ni parcel</p>
+              <p className={styles.regionEmptyText}>
+                Zgodovinski SURS graf je vseeno na voljo zgoraj. Ko narišeš parcelo v tej regiji, se bodo tukaj prikazale še analize tal in primerjave parcel.
+              </p>
+            </div>
+          </div>
         ) : (
           parcele.map(p => (
             <ParcelaCard key={p.id} parcela={p} />

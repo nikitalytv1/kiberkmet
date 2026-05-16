@@ -46,9 +46,9 @@ const CROP_NAME_SL = {
   'Pumpkins for oil': 'Oljne buce',
   'Rape and turnip rape': 'Oljna ogrscica',
   Hops: 'Hmelj',
-  'Grasses (including mixtures)': 'Trave in travne mesanice',
-  'Grass - clover mixtures': 'Travnodeteljne mesanice',
-  'Clover - grass mixtures': 'Deteljnotravne mesanice',
+  'Grasses (including mixtures)': 'Trave in travne mešanice',
+  'Grass - clover mixtures': 'Travnodeteljne mešanice',
+  'Clover - grass mixtures': 'Deteljnotravne mešanice',
   Clover: 'Detelja',
   Lucerne: 'Lucerna',
   'Permanent grassland, including common grassland': 'Trajno travinje',
@@ -335,6 +335,7 @@ export async function getParceleByRegion(req, res) {
 
     return res.json({
       region: STATISTICAL_REGIONS.find(region => region.code === regionCode),
+      yieldStats: Object.values(yieldsByCropCode),
       parcele: parcele.map(parcela => ({
         ...parcela,
         sursYieldStats: getSursStatsForParcela(parcela, yieldsByCropCode)
