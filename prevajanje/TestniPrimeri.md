@@ -230,3 +230,235 @@ city "Kranj" {
   crop "Sauvignon" (46.2395,14.3567)
 }
 ```
+
+## Primer 6
+
+```txt
+city "Murska Sobota" {
+  road "Njivska pot" {
+    line((46.6520,16.1660),(46.6530,16.1672))
+    bend((46.6530,16.1672),(46.6540,16.1684),38)
+    set("podlaga","makadam")
+  }
+
+  building "Sušilnica" {
+    box((46.6517,16.1657),(46.6522,16.1662))
+    line((46.6517,16.1657),(46.6522,16.1662))
+    set("tip","sušilnica za žito")
+  }
+
+  field "Koruznо polje" {
+    box((46.6524,16.1665),(46.6542,16.1688))
+    line((46.6524,16.1665),(46.6542,16.1665))
+    set("tip rabe","njiva")
+    set("procent površine",90)
+    set("načrtovan pridelek","koruza")
+    set("količina semena kg",180)
+  }
+
+  zone "Pomurska ravnina" {
+    box((46.6519,16.1658),(46.6545,16.1692))
+    line((46.6519,16.1658),(46.6545,16.1692))
+    set("šifra regije",1)
+  }
+
+  river "Ledava" {
+    line((46.6515,16.1655),(46.6548,16.1695))
+    bend((46.6530,16.1670),(46.6542,16.1685),20)
+    set("vodno tveganje","srednje")
+  }
+
+  sensor "Talni senzor 3" (46.6533,16.1675) {
+    set("ph",6.2)
+    set("organski ogljik",9.8)
+    set("vlažnost tal",55)
+  }
+
+  crop "Koruza" (46.6535,16.1677)
+}
+```
+
+## Primer 7
+
+```txt
+city "Velenje" {
+  road "Rudarska cesta" {
+    line((46.3590,15.1080),(46.3600,15.1092))
+    bend((46.3600,15.1092),(46.3610,15.1104),45)
+    set("podlaga","asfalt")
+  }
+
+  building "Skladišče" {
+    box((46.3587,15.1077),(46.3592,15.1082))
+    line((46.3587,15.1077),(46.3592,15.1082))
+    set("tip","industrijsko skladišče")
+  }
+
+  field "Travnik ob jezeru" {
+    box((46.3594,15.1085),(46.3614,15.1108))
+    line((46.3594,15.1085),(46.3614,15.1085))
+    set("tip rabe","travnik")
+    set("procent površine",60)
+    set("načrtovan pridelek","trava")
+  }
+
+  zone "Industrijska cona" {
+    box((46.3589,15.1079),(46.3617,15.1112))
+    line((46.3589,15.1079),(46.3617,15.1112))
+    set("zaščita","nizka")
+  }
+
+  river "Paka" {
+    line((46.3585,15.1075),(46.3619,15.1115))
+    bend((46.3599,15.1090),(46.3613,15.1107),30)
+    set("pretok","srednji")
+  }
+
+  sensor "Okoljski senzor" (46.3603,15.1095) {
+    set("temperatura",12.4)
+    set("vlažnost",72)
+    set("možnost padavin",48)
+  }
+
+  crop "Trava" (46.3605,15.1097)
+}
+```
+
+## Primer 8
+
+```txt
+city "Nova Gorica" {
+  road "Vinorodna pot" {
+    line((45.9560,13.6520),(45.9570,13.6532))
+    bend((45.9570,13.6532),(45.9580,13.6544),50)
+    set("podlaga","zemlja")
+  }
+
+  building "Zidanica" {
+    box((45.9557,13.6517),(45.9562,13.6522))
+    line((45.9557,13.6517),(45.9562,13.6522))
+    set("tip","zidanica")
+  }
+
+  field "Vinograd sever" {
+    box((45.9563,13.6524),(45.9583,13.6547))
+    line((45.9563,13.6524),(45.9583,13.6524))
+    set("tip rabe","vinograd")
+    set("procent površine",100)
+    set("načrtovan pridelek","merlot")
+  }
+
+  zone "Goriška brda" {
+    box((45.9558,13.6519),(45.9586,13.6550))
+    line((45.9558,13.6519),(45.9586,13.6550))
+    set("šifra regije",5)
+  }
+
+  river "Soča" {
+    line((45.9554,13.6515),(45.9589,13.6553))
+    bend((45.9568,13.6530),(45.9582,13.6546),15)
+    set("vodno tveganje","nizko")
+  }
+
+  sensor "Vinogradniški senzor 2" (45.9572,13.6535) {
+    set("ph",7.3)
+    set("organski ogljik",21.0)
+    set("temperatura",17.8)
+  }
+
+  crop "Merlot" (45.9574,13.6537)
+}
+```
+
+## Primer 9
+
+```txt
+city "Koper" {
+  road "Obalna pot" {
+    line((45.5480,13.7290),(45.5490,13.7302))
+    bend((45.5490,13.7302),(45.5500,13.7314),25)
+    set("podlaga","asfalt")
+  }
+
+  building "Ribnica" {
+    box((45.5477,13.7287),(45.5482,13.7292))
+    line((45.5477,13.7287),(45.5482,13.7292))
+    set("tip","ribiška lopa")
+  }
+
+  field "Oljčni nasad" {
+    box((45.5484,13.7295),(45.5503,13.7318))
+    line((45.5484,13.7295),(45.5503,13.7295))
+    set("tip rabe","nasad")
+    set("procent površine",85)
+    set("načrtovan pridelek","oljke")
+  }
+
+  zone "Primorska cona" {
+    box((45.5479,13.7289),(45.5506,13.7321))
+    line((45.5479,13.7289),(45.5506,13.7321))
+    set("šifra regije",6)
+  }
+
+  river "Badaševica" {
+    line((45.5475,13.7285),(45.5508,13.7324))
+    bend((45.5490,13.7300),(45.5504,13.7316),18)
+    set("pretok","nizek")
+  }
+
+  sensor "Mediteranski senzor" (45.5493,13.7305) {
+    set("temperatura",22.5)
+    set("vlažnost",58)
+    set("ph",7.8)
+  }
+
+  crop "Oljke" (45.5495,13.7307)
+}
+```
+
+## Primer 10
+
+```txt
+city "Celje" {
+  road "Savinjska pot" {
+    line((46.2310,15.2610),(46.2320,15.2622))
+    bend((46.2320,15.2622),(46.2330,15.2634),36)
+    set("podlaga","gramoz")
+  }
+
+  building "Mlin" {
+    box((46.2307,15.2607),(46.2312,15.2612))
+    line((46.2307,15.2607),(46.2312,15.2612))
+    set("tip","mlin")
+  }
+
+  field "Hmeljišče" {
+    box((46.2314,15.2614),(46.2334,15.2638))
+    line((46.2314,15.2614),(46.2334,15.2614))
+    set("tip rabe","njiva")
+    set("procent površine",95)
+    set("načrtovan pridelek","hmelj")
+    set("količina semena kg",40)
+  }
+
+  zone "Savinjska dolina" {
+    box((46.2309,15.2609),(46.2337,15.2641))
+    line((46.2309,15.2609),(46.2337,15.2641))
+    set("šifra regije",3)
+  }
+
+  river "Savinja" {
+    line((46.2305,15.2605),(46.2340,15.2644))
+    bend((46.2319,15.2620),(46.2333,15.2636),24)
+    set("vodno tveganje","visoko")
+  }
+
+  sensor "Hmeljarski senzor" (46.2323,15.2625) {
+    set("ph",6.5)
+    set("dušik",2.3)
+    set("vlažnost tal",48)
+  }
+
+  crop "Hmelj" (46.2325,15.2627)
+}
+```
