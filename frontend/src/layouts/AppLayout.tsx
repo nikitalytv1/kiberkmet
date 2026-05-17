@@ -3,14 +3,8 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { Map, Layers, Settings, ChartNoAxesCombined } from 'lucide-react';
 import styles from './AppLayout.module.css';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { prefetchRegionParcele, prefetchStatisticalRegions } from '../api/regions';
-
-const navItems = [
-  { label: 'Zemljevid', icon: Map, to: '/map' },
-  { label: 'Moje parcele', icon: Layers, to: '/dashboard' },
-  { label: 'Regije', icon: ChartNoAxesCombined, to: '/regions' },
-  { label: 'Nastavitve', icon: Settings, to: '/settings' },
-];
 
 function initials(name: string) {
   return name
@@ -24,6 +18,14 @@ function initials(name: string) {
 function AppLayout() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
+
+  const navItems = [
+    { label: t('nav.map'), icon: Map, to: '/map' },
+    { label: t('nav.parcels'), icon: Layers, to: '/dashboard' },
+    { label: t('nav.regions'), icon: ChartNoAxesCombined, to: '/regions' },
+    { label: t('nav.settings'), icon: Settings, to: '/settings' },
+  ];
 
   useEffect(() => {
     prefetchStatisticalRegions();

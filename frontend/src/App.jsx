@@ -15,11 +15,13 @@ import ProfileTab from "./views/settings/ProfileTab";
 import DangerTab from "./views/settings/DangerTab";
 import LanguageTab from "./views/settings/LanguageTab";
 import { AuthProvider } from "./context/AuthContext";
+import { LanguageProvider } from "./context/LanguageContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
     <BrowserRouter>
+      <LanguageProvider>
       <AuthProvider>
         <Routes>
           {/* Testi */}
@@ -62,6 +64,7 @@ function App() {
           </Route>
         </Routes>
       </AuthProvider>
+      </LanguageProvider>
     </BrowserRouter>
   );
 }

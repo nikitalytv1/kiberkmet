@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Pencil, Search } from 'lucide-react';
 import styles from '../map.module.css';
 import { DrawnPolygon } from '../types';
+import { useLanguage } from '../../../context/LanguageContext';
 
 export function ParcelsSidebar({
   parcels,
@@ -18,6 +19,7 @@ export function ParcelsSidebar({
   onRename: (id: string, name: string) => void;
 }) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -51,7 +53,7 @@ export function ParcelsSidebar({
   return (
     <div className={styles.parcelsSidebar}>
       <div className={styles.sidebarHeader}>
-        <p className={styles.sidebarTitle}>Moje parcele</p>
+        <p className={styles.sidebarTitle}>{t('map.sidebar.title')}</p>
         <span className={styles.sidebarCount}>{parcels.length}</span>
       </div>
 
@@ -59,7 +61,7 @@ export function ParcelsSidebar({
         <Search size={13} className={styles.searchIcon} />
         <input
           className={styles.searchInput}
-          placeholder="Isci parcelo..."
+          placeholder={t('map.sidebar.search')}
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -100,8 +102,8 @@ export function ParcelsSidebar({
                   {p.cropPlans?.length
                     ? p.cropPlans.map(plan => `${plan.cropName} ${Math.round(plan.areaPercent)}%`).join(', ')
                     : p.plannedCropName || p.plannedCropPercent != null
-                      ? `${p.plannedCropName ?? 'Zasedeno'} ${p.plannedCropPercent ?? 0}%`
-                      : 'Brez pridelkov'}
+                      ? `${p.plannedCropName ?? t('map.sidebar.noCrops')} ${p.plannedCropPercent ?? 0}%`
+                      : t('map.sidebar.noCrops')}
                 </span>
               </div>
             </div>
@@ -109,14 +111,14 @@ export function ParcelsSidebar({
             {editingId !== p.id && (
               <button
                 className={styles.renameBtn}
-                title="Preimenuj"
+                title={t('map.sidebar.rename')}
                 onClick={e => startEdit(p, e)}
               >
                 <Pencil size={11} />
               </button>
             )}
 
-            <label className={styles.colorPickerWrap} title="Spremeni barvo" onClick={e => e.stopPropagation()}>
+            <label className={styles.colorPickerWrap} title={t('map.sidebar.colorChange')} onClick={e => e.stopPropagation()}>
               <span className={styles.colorSwatch} style={{ backgroundColor: p.color }} />
               <input
                 type="color"
@@ -129,7 +131,7 @@ export function ParcelsSidebar({
         ))}
 
         {filtered.length === 0 && (
-          <p className={styles.sidebarEmpty}>Ni zadetkov.</p>
+          <p className={styles.sidebarEmpty}>{t('map.sidebar.empty')}</p>
         )}
       </div>
     </div>

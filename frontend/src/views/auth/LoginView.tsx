@@ -2,35 +2,37 @@ import styles from './auth.module.css';
 import AuthLayout from './components/AuthLayout';
 import FormField from './components/FormField';
 import { useLoginForm } from '../../hooks/useLoginForm';
+import { useLanguage } from '../../context/LanguageContext';
 
 function LoginView() {
   const { fields, setters, error, loading, handleSubmit } = useLoginForm();
   const { email, password } = fields;
   const { setEmail, setPassword } = setters;
+  const { t } = useLanguage();
 
   return (
     <AuthLayout
-      leftHeading={<>Veseli smo,<br />da si spet tu.</>}
-      leftSubtext="Tvoja polja te čakajo. Preveri stanje tal, AI priporočila in podatke za vsako parcelo."
-      heading="Dobrodošli nazaj"
-      subheading="Prijavi se v svoj račun"
-      prompt="Še nimaš računa?"
-      promptLinkText="Ustvari račun"
+      leftHeading={<>{t('auth.login.leftHeading')}</>}
+      leftSubtext={t('auth.login.leftSub')}
+      heading={t('auth.login.heading')}
+      subheading={t('auth.login.subheading')}
+      prompt={t('auth.login.prompt')}
+      promptLinkText={t('auth.login.promptLink')}
       promptLinkHref="/register"
     >
       <form className={styles.form} onSubmit={handleSubmit}>
-        <FormField id="email" label="E-pošta" type="email" placeholder="janez@primer.si"
+        <FormField id="email" label={t('auth.login.email')} type="email" placeholder={t('auth.login.emailPlaceholder')}
           value={email} onChange={e => setEmail(e.target.value)} />
 
-        <FormField id="password" label="Geslo" type="password" placeholder="Vnesi geslo"
+        <FormField id="password" label={t('auth.login.password')} type="password" placeholder={t('auth.login.passwordPlaceholder')}
           value={password} onChange={e => setPassword(e.target.value)}>
-          <a href="#" className={styles.forgotPassword}>Pozabljeno geslo?</a>
+          <a href="#" className={styles.forgotPassword}>{t('auth.login.forgot')}</a>
         </FormField>
 
         {error && <p className={styles.error}>{error}</p>}
 
         <button type="submit" className={styles.submitBtn} disabled={loading}>
-          {loading ? 'Prijava...' : 'Prijavi se'}
+          {loading ? t('auth.login.submitting') : t('auth.login.submit')}
         </button>
       </form>
     </AuthLayout>

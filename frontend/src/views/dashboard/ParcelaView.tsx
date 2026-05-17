@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Bot, CalendarDays, Droplets, FlaskConical, Leaf, Pencil, Plus, Sprout, Trash2 } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 import { MapContainer, TileLayer, Polygon } from 'react-leaflet';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
@@ -53,14 +54,14 @@ type SoilLayer = {
 
 type WeatherDay = {
   date: string;
-  dayName: string;
+  dayName: typeof DAY_KEYS[number];
   maxTemp: number;
   minTemp: number;
   precipitation: number;
   weatherCode: number;
 };
 
-const DAY_NAMES_SL = ['Ned', 'Pon', 'Tor', 'Sre', 'Čet', 'Pet', 'Sob'];
+const DAY_KEYS = ['day.sun', 'day.mon', 'day.tue', 'day.wed', 'day.thu', 'day.fri', 'day.sat'] as const;
 
 function weatherIcon(code: number) {
   if (code === 0 || code === 1) return '☀️';
@@ -73,19 +74,21 @@ function weatherIcon(code: number) {
   return '☁️';
 }
 
-function weatherDescription(code: number) {
-  if (code === 0) return 'Jasno';
-  if (code === 1) return 'Pretežno jasno';
-  if (code === 2) return 'Delno oblačno';
-  if (code === 3) return 'Oblačno';
-  if (code >= 51 && code <= 55) return 'Rosenje';
-  if (code >= 56 && code <= 57) return 'Ledeno rosenje';
-  if (code >= 61 && code <= 65) return 'Dež';
-  if (code >= 66 && code <= 67) return 'Leden dež';
-  if (code >= 71 && code <= 75) return 'Sneženje';
-  if (code >= 80 && code <= 82) return 'Plohe';
-  if (code >= 95) return 'Nevihta';
-  return 'Oblačno';
+type WeatherDescKey = 'weather.clear' | 'weather.mainlyClear' | 'weather.partlyCloudy' | 'weather.cloudy' | 'weather.drizzle' | 'weather.freezingDrizzle' | 'weather.rain' | 'weather.freezingRain' | 'weather.snow' | 'weather.showers' | 'weather.thunderstorm';
+
+function weatherDescriptionKey(code: number): WeatherDescKey {
+  if (code === 0) return 'weather.clear';
+  if (code === 1) return 'weather.mainlyClear';
+  if (code === 2) return 'weather.partlyCloudy';
+  if (code === 3) return 'weather.cloudy';
+  if (code >= 51 && code <= 55) return 'weather.drizzle';
+  if (code >= 56 && code <= 57) return 'weather.freezingDrizzle';
+  if (code >= 61 && code <= 65) return 'weather.rain';
+  if (code >= 66 && code <= 67) return 'weather.freezingRain';
+  if (code >= 71 && code <= 75) return 'weather.snow';
+  if (code >= 80 && code <= 82) return 'weather.showers';
+  if (code >= 95) return 'weather.thunderstorm';
+  return 'weather.cloudy';
 }
 
 async function fetchWeather(lat: number, lon: number): Promise<WeatherDay[]> {
@@ -104,7 +107,7 @@ async function fetchWeather(lat: number, lon: number): Promise<WeatherDay[]> {
     const d = new Date(date + 'T00:00:00');
     return {
       date,
-      dayName: DAY_NAMES_SL[d.getDay()],
+      dayName: DAY_KEYS[d.getDay()],
       maxTemp: daily.temperature_2m_max[i],
       minTemp: daily.temperature_2m_min[i],
       precipitation: daily.precipitation_probability_max?.[i] ?? 0,
@@ -499,6 +502,7 @@ function qualityClass(score: number) {
 function ParcelaView() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [parcela, setParcela] = useState<ParcelaDetails | null>(null);
   const [analysis, setAnalysis] = useState<ParcelaAnalysis | null>(null);
   const [soilLoading, setSoilLoading] = useState(false);
@@ -529,10 +533,10 @@ function ParcelaView() {
   const analysisPending = soilLoading && !analysis;
 
   const soilComposition = useMemo(() => [
-    { label: 'Pesek', value: soil.sand, color: '#d6a85b' },
-    { label: 'Melj', value: soil.silt, color: '#8fb8a8' },
-    { label: 'Glina', value: soil.clay, color: '#7c6f64' },
-  ].filter(item => item.value != null && item.value > 0), [soil]);
+    { label: t('parcela.soilComposition.sand'), value: soil.sand, color: '#d6a85b' },
+    { label: t('parcela.soilComposition.silt'), value: soil.silt, color: '#8fb8a8' },
+    { label: t('parcela.soilComposition.clay'), value: soil.clay, color: '#7c6f64' },
+  ].filter(item => item.value != null && item.value > 0), [soil, t]);
 
   const soilChartData = useMemo(() => ({
     labels: soilComposition.map(item => item.label),
@@ -728,12 +732,12 @@ function ParcelaView() {
   }, [id, parcela]);
 
   const soilCards = [
-    { label: 'pH tal', value: formatNumber(soil.ph, 1), sub: 'Optimalno: 6.0-7.5', icon: FlaskConical, score: scoreRange(soil.ph, 6, 7.5) },
-    { label: 'CEC', value: formatNumber(soil.cec, 1), sub: 'Optimalno: 10-25 cmol(c)/kg', icon: FlaskConical, score: scoreRange(soil.cec, 10, 25) },
-    { label: 'Dušik (N)', value: `${formatNumber(soil.nitrogen, 2)} g/kg`, sub: 'Optimalno: 1.0-3.0 g/kg', icon: Leaf, score: scoreRange(soil.nitrogen, 1, 3) },
-    { label: 'Org. ogljik', value: `${formatNumber(soil.organicCarbon, 1)} g/kg`, sub: 'Optimalno: nad 10 g/kg', icon: Sprout, score: scoreMinimum(soil.organicCarbon, 10) },
-    { label: 'Glina', value: `${formatNumber(soil.clay, 0)}%`, sub: 'Optimalno: 10-35%', icon: Droplets, score: scoreRange(soil.clay, 10, 35) },
-    { label: 'Pesek', value: `${formatNumber(soil.sand, 0)}%`, sub: 'Optimalno: 20-60%', icon: Droplets, score: scoreRange(soil.sand, 20, 60) },
+    { label: t('parcela.soil.ph'), value: formatNumber(soil.ph, 1), sub: t('parcela.soil.ph.optimal'), icon: FlaskConical, score: scoreRange(soil.ph, 6, 7.5) },
+    { label: t('parcela.soil.cec'), value: formatNumber(soil.cec, 1), sub: t('parcela.soil.cec.optimal'), icon: FlaskConical, score: scoreRange(soil.cec, 10, 25) },
+    { label: t('parcela.soil.nitrogen'), value: `${formatNumber(soil.nitrogen, 2)} g/kg`, sub: t('parcela.soil.nitrogen.optimal'), icon: Leaf, score: scoreRange(soil.nitrogen, 1, 3) },
+    { label: t('parcela.soil.carbon'), value: `${formatNumber(soil.organicCarbon, 1)} g/kg`, sub: t('parcela.soil.carbon.optimal'), icon: Sprout, score: scoreMinimum(soil.organicCarbon, 10) },
+    { label: t('parcela.soil.clay'), value: `${formatNumber(soil.clay, 0)}%`, sub: t('parcela.soil.clay.optimal'), icon: Droplets, score: scoreRange(soil.clay, 10, 35) },
+    { label: t('parcela.soil.sand'), value: `${formatNumber(soil.sand, 0)}%`, sub: t('parcela.soil.sand.optimal'), icon: Droplets, score: scoreRange(soil.sand, 20, 60) },
   ];
 
   const totalPlannedPercent = cropPlans.reduce((sum, plan) => sum + Number(plan.areaPercent || 0), 0);
@@ -747,17 +751,17 @@ function ParcelaView() {
     const trimmedName = cropNameValue.trim();
     const percent = Number(cropPercentValue);
     if (!trimmedName || !Number.isFinite(percent)) {
-      setCropPlanError('Vnesi pridelek in procent površine.');
+      setCropPlanError(t('parcela.cropplan.error.required'));
       return;
     }
 
     if (percent <= 0) {
-      setCropPlanError('Procent pridelka mora biti večji od 0.');
+      setCropPlanError(t('parcela.cropplan.error.zeroPercent'));
       return;
     }
 
     if (percent > remainingPercent) {
-      setCropPlanError(`Na parceli je prostih samo ${remainingPercent.toFixed(0)}%.`);
+      setCropPlanError(`${remainingPercent.toFixed(0)}% ${t('parcela.cropplan.free')}.`);
       return;
     }
 
@@ -790,7 +794,7 @@ function ParcelaView() {
       setPlantedAmountUnit('kg');
       setPlantingDateValue(todayInputDate());
     } catch (err) {
-      setCropPlanError(err instanceof Error ? err.message : 'Pridelka ni bilo mogoče shraniti.');
+      setCropPlanError(err instanceof Error ? err.message : t('parcela.cropplan.error.generic'));
     } finally {
       setSavingCropPlan(false);
     }
@@ -805,7 +809,7 @@ function ParcelaView() {
       await deleteCropPlan(parcela.id, planId);
     } catch (err) {
       setCropPlans(previous);
-      setCropPlanError(err instanceof Error ? err.message : 'Pridelka ni bilo mogoče izbrisati.');
+      setCropPlanError(err instanceof Error ? err.message : t('parcela.cropplan.error.delete'));
     }
   }
 
@@ -826,14 +830,14 @@ function ParcelaView() {
       setCropPlans(prev => prev.map(item => item.id === plan.id ? updated : item));
     } catch (err) {
       setCropPlans(previous);
-      setCropPlanError(err instanceof Error ? err.message : 'Procenta ni bilo mogoče posodobiti.');
+      setCropPlanError(err instanceof Error ? err.message : t('parcela.cropplan.error.update'));
     }
   }
 
   if (loading) {
     return (
       <div className={styles.page}>
-        <p className={styles.empty}>Nalagam parcelo ...</p>
+        <p className={styles.empty}>{t('parcela.loading')}</p>
       </div>
     );
   }
@@ -841,8 +845,8 @@ function ParcelaView() {
   if (!parcela) {
     return (
       <div className={styles.page}>
-        <Link to="/dashboard" className={styles.backLink}><ArrowLeft size={16} /> Nazaj</Link>
-        <p className={styles.empty}>{error ?? 'Parcela ni najdena.'}</p>
+        <Link to="/dashboard" className={styles.backLink}><ArrowLeft size={16} /> {t('parcela.back')}</Link>
+        <p className={styles.empty}>{error ?? t('parcela.notFound')}</p>
       </div>
     );
   }
@@ -850,10 +854,10 @@ function ParcelaView() {
   return (
     <div className={styles.page}>
       <div className={styles.detailHeader}>
-        <Link to="/dashboard" className={styles.backLink}><ArrowLeft size={16} /> Nazaj</Link>
+        <Link to="/dashboard" className={styles.backLink}><ArrowLeft size={16} /> {t('parcela.back')}</Link>
         <div className={styles.detailHeaderDivider} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p className={styles.detailEyebrow}>Analiza tal</p>
+          <p className={styles.detailEyebrow}>{t('parcela.eyebrow')}</p>
           <div className={styles.detailTitleRow}>
             {editingName ? (
               <input
@@ -917,13 +921,13 @@ function ParcelaView() {
               <div className={styles.analysisLoading}>
                 <div className={styles.analysisSpinner} />
                 <div>
-                  <p className={styles.analysisLoadingTitle}>Analiza tal se izvaja ...</p>
-                  <p className={styles.analysisLoadingSub}>Pridobivam SoilGrids podatke za novo parcelo.</p>
+                  <p className={styles.analysisLoadingTitle}>{t('parcela.analysis.pending.title')}</p>
+                  <p className={styles.analysisLoadingSub}>{t('parcela.analysis.pending.sub')}</p>
                 </div>
               </div>
             ) : (
               <>
-                {soilLoading && <p className={styles.panelNotice}>Osvežujem SoilGrids vrednosti ...</p>}
+                {soilLoading && <p className={styles.panelNotice}>{t('parcela.soil.refreshing')}</p>}
                 {soilError && <p className={styles.panelNotice}>{soilError}</p>}
                 <div className={styles.soilGrid}>
                   {soilCards.map(({ label, value, sub, icon: Icon, score }, idx) => {
@@ -959,15 +963,15 @@ function ParcelaView() {
             <div className={styles.chartPanel}>
               <div className={styles.chartHeader}>
                 <div>
-                  <p className={styles.chartTitle}>Sestava tal</p>
-                  <p className={styles.chartSub}>Pesek, melj in glina po SoilGrids</p>
+                  <p className={styles.chartTitle}>{t('parcela.chart.soilComposition')}</p>
+                  <p className={styles.chartSub}>{t('parcela.chart.soilComposition.sub')}</p>
                 </div>
               </div>
               <div className={styles.chartBox}>
                 {soilComposition.length > 0 ? (
                   <Pie data={soilChartData} options={chartOptions} />
                 ) : (
-                  <p className={styles.panelNotice}>Ni dovolj podatkov za graf sestave tal.</p>
+                  <p className={styles.panelNotice}>{t('parcela.chart.soilComposition.noData')}</p>
                 )}
               </div>
             </div>
@@ -975,9 +979,9 @@ function ParcelaView() {
             <div className={styles.chartPanel}>
               <div className={styles.chartHeader}>
                 <div>
-                  <p className={styles.chartTitle}>Najvišji donos v regiji</p>
+                  <p className={styles.chartTitle}>{t('parcela.chart.topYield')}</p>
                   <p className={styles.chartSub}>
-                    {topCrops ? `${topCrops.region}, ${topCrops.year} · vir: ${topCrops.source}` : 'Nalagam podatke SURS ...'}
+                    {topCrops ? `${topCrops.region}, ${topCrops.year} · vir: ${topCrops.source}` : t('parcela.chart.topYield.loading')}
                   </p>
                 </div>
               </div>
@@ -985,7 +989,7 @@ function ParcelaView() {
                 {topCrops?.crops.length ? (
                   <Bar data={cropChartData} options={barOptions} />
                 ) : (
-                  <p className={styles.panelNotice}>{topCropsError ?? 'Ni podatkov za regijo.'}</p>
+                  <p className={styles.panelNotice}>{topCropsError ?? t('parcela.chart.topYield.noData')}</p>
                 )}
               </div>
             </div>
@@ -1040,7 +1044,7 @@ function ParcelaView() {
                 />
               </div>
               <div className={styles.cropPlanField}>
-                <label>Datum sajenja</label>
+                <label>{t('parcela.cropplan.field.date')}</label>
                 <input
                   type="date"
                   value={plantingDateValue}
@@ -1049,7 +1053,7 @@ function ParcelaView() {
                 />
               </div>
               <button className={styles.cropPlanAddBtn} type="submit" disabled={savingCropPlan || isFullyPlanted}>
-                <Plus size={15} /> Dodaj
+                <Plus size={15} /> {t('parcela.cropplan.add')}
               </button>
             </form>
 
@@ -1069,7 +1073,7 @@ function ParcelaView() {
                   <div className={styles.cropPlanPercentControl}>
                     <button
                       type="button"
-                      title="Zmanjšaj procent"
+                      title={t('parcela.cropplan.decrease')}
                       disabled={plan.areaPercent <= 1}
                       onClick={() => handleAdjustCropPlan(plan, -1)}
                     >
@@ -1078,7 +1082,7 @@ function ParcelaView() {
                     <span>{Math.round(plan.areaPercent)}%</span>
                     <button
                       type="button"
-                      title="Povečaj procent"
+                      title={t('parcela.cropplan.increase')}
                       disabled={remainingPercent <= 0}
                       onClick={() => handleAdjustCropPlan(plan, Math.min(1, remainingPercent))}
                     >
@@ -1098,17 +1102,17 @@ function ParcelaView() {
           <section className={styles.recommendPanel} style={{ marginTop: 24 }}>
             <div className={styles.recommendHeader}>
               <div>
-                <p className={styles.recommendTitle}><Bot size={17} /> AI priporočila — Kaj saditi?</p>
+                <p className={styles.recommendTitle}><Bot size={17} /> {t('parcela.ai.title')}</p>
                 <p className={styles.recommendSub}>
-                  {parcela.typeOfUse ? `Pridelki za rabo ${parcela.typeOfUse}` : 'Pridelki glede na vrsto parcele'} · tla in vreme
+                  {parcela.typeOfUse ? `${t('parcela.ai.landuse')} ${parcela.typeOfUse}` : t('parcela.ai.landuse.generic')} · tla in vreme
                 </p>
               </div>
-              <span className={styles.modelBadge}>SoilGrids + vreme</span>
+              <span className={styles.modelBadge}>{t('parcela.ai.badge')}</span>
             </div>
 
             <div className={styles.compatibilityList}>
               {analysisPending ? (
-                <p className={styles.panelNotice}>Priporočila bodo vidna takoj, ko se analiza zaključi.</p>
+                <p className={styles.panelNotice}>{t('parcela.ai.pending')}</p>
               ) : cropScores.map((crop, idx) => (
                 <div key={crop.name} className={styles.compatibilityRow} style={{ animationDelay: `${idx * 70}ms` }}>
                   <div className={styles.cropIcon}>{crop.icon}</div>
@@ -1128,7 +1132,7 @@ function ParcelaView() {
                       />
                     </div>
                     <p className={styles.cropMeta}><CalendarDays size={13} /> {crop.season} · {crop.yield}</p>
-                    <p className={styles.cropMeta}>Vremenski kriterij: {crop.weatherScore}%</p>
+                    <p className={styles.cropMeta}>{t('parcela.ai.weatherCriteria')} {crop.weatherScore}%</p>
                   </div>
                 </div>
               ))}
@@ -1138,21 +1142,21 @@ function ParcelaView() {
           <section className={styles.cropPlanPanel} style={{ marginTop: 24 }}>
             <div className={styles.cropPlanHeader}>
               <div>
-                <p className={styles.cropPlanTitle}><Sprout size={17} /> Načrt pridelkov</p>
-                <p className={styles.cropPlanSub}>Po AI predlogih določi pridelek, procent površine, količino sajenja in pričakovani pridelek.</p>
+                <p className={styles.cropPlanTitle}><Sprout size={17} /> {t('parcela.cropplan.title')}</p>
+                <p className={styles.cropPlanSub}>{t('parcela.cropplan.sub')}</p>
               </div>
               <span className={`${styles.cropPlanTotal} ${isFullyPlanted ? styles.cropPlanTotalFull : ''}`}>
-                {Math.min(totalPlannedPercent, 100).toFixed(0)}% zasedeno - {remainingPercent.toFixed(0)}% prosto
+                {Math.min(totalPlannedPercent, 100).toFixed(0)}% {t('parcela.cropplan.occupied')} - {remainingPercent.toFixed(0)}% {t('parcela.cropplan.free')}
               </span>
             </div>
 
             {isFullyPlanted && (
-              <p className={styles.cropPlanFullNotice}>Parcela je 100% zasedena. Za nov pridelek najprej odstrani ali zmanjša obstoječo rabo.</p>
+              <p className={styles.cropPlanFullNotice}>{t('parcela.cropplan.full')}</p>
             )}
 
             <form className={styles.cropPlanForm} onSubmit={handleAddCropPlan}>
               <div className={styles.cropPlanField}>
-                <label>Pridelek</label>
+                <label>{t('parcela.cropplan.field.crop')}</label>
                 <input
                   className={cropPlanError && !cropNameValue.trim() ? styles.cropPlanInputError : undefined}
                   list="crop-options-plan"
@@ -1162,14 +1166,14 @@ function ParcelaView() {
                     setCropNameValue(e.target.value);
                     if (cropPlanError) setCropPlanError(null);
                   }}
-                  placeholder="npr. Koruza"
+                  placeholder={t('parcela.cropplan.field.crop.placeholder')}
                 />
                 <datalist id="crop-options-plan">
                   {CROPS.map(crop => <option key={crop.name} value={crop.name} />)}
                 </datalist>
               </div>
               <div className={styles.cropPlanField}>
-                <label>Površina</label>
+                <label>{t('parcela.cropplan.field.area')}</label>
                 <input
                   type="number"
                   min="1"
@@ -1184,7 +1188,7 @@ function ParcelaView() {
                 />
               </div>
               <div className={styles.cropPlanField}>
-                <label>Posejano</label>
+                <label>{t('parcela.cropplan.field.planted')}</label>
                 <div className={styles.cropPlanAmountGroup}>
                   <input
                     type="number"
@@ -1206,7 +1210,7 @@ function ParcelaView() {
                 </div>
               </div>
               <div className={styles.cropPlanField}>
-                <label>Datum sajenja</label>
+                <label>{t('parcela.cropplan.field.date')}</label>
                 <input
                   type="date"
                   value={plantingDateValue}
@@ -1215,7 +1219,7 @@ function ParcelaView() {
                 />
               </div>
               <button className={styles.cropPlanAddBtn} type="submit" disabled={savingCropPlan || isFullyPlanted}>
-                <Plus size={15} /> Dodaj
+                <Plus size={15} /> {t('parcela.cropplan.add')}
               </button>
             </form>
 
@@ -1228,8 +1232,8 @@ function ParcelaView() {
                     <Sprout size={22} />
                   </div>
                   <div>
-                    <p className={styles.cropPlanEmptyTitle}>Ni še posajenih pridelkov</p>
-                    <p className={styles.cropPlanEmptyText}>Izberi pridelek, določi procent površine in dodaj načrt sajenja za to parcelo.</p>
+                    <p className={styles.cropPlanEmptyTitle}>{t('parcela.cropplan.empty.title')}</p>
+                    <p className={styles.cropPlanEmptyText}>{t('parcela.cropplan.empty.text')}</p>
                   </div>
                 </div>
               ) : cropPlans.map(plan => {
@@ -1245,7 +1249,7 @@ function ParcelaView() {
                     <div className={styles.cropPlanPercentControl}>
                       <button
                         type="button"
-                        title="Zmanjšaj procent"
+                        title={t('parcela.cropplan.decrease')}
                         disabled={plan.areaPercent <= 1}
                         onClick={() => handleAdjustCropPlan(plan, -1)}
                       >
@@ -1254,17 +1258,17 @@ function ParcelaView() {
                       <span>{Math.round(plan.areaPercent)}%</span>
                       <button
                         type="button"
-                        title="Povečaj procent"
+                        title={t('parcela.cropplan.increase')}
                         disabled={remainingPercent <= 0}
                         onClick={() => handleAdjustCropPlan(plan, Math.min(1, remainingPercent))}
                       >
                         +
                       </button>
                     </div>
-                    <p className={styles.cropPlanDate}>Posejano<br /><strong>{formatMassKg(plan.plantedAmountKg)}</strong></p>
-                    <p className={styles.cropPlanDate}>Pobiranje<br /><strong>{formatDate(plan.harvestDate)}</strong></p>
-                    <p className={styles.cropPlanDate}>Ocena pridelka<br /><strong>{formatMassKg(expectedHarvestKg)}</strong></p>
-                    <button className={styles.cropPlanDeleteBtn} title="Izbriši pridelek" onClick={() => handleDeleteCropPlan(plan.id)}>
+                    <p className={styles.cropPlanDate}>{t('parcela.cropplan.seeded')}<br /><strong>{formatMassKg(plan.plantedAmountKg)}</strong></p>
+                    <p className={styles.cropPlanDate}>{t('parcela.cropplan.harvest')}<br /><strong>{formatDate(plan.harvestDate)}</strong></p>
+                    <p className={styles.cropPlanDate}>{t('parcela.cropplan.estimate')}<br /><strong>{formatMassKg(expectedHarvestKg)}</strong></p>
+                    <button className={styles.cropPlanDeleteBtn} title={t('parcela.cropplan.delete')} onClick={() => handleDeleteCropPlan(plan.id)}>
                       <Trash2 size={15} />
                     </button>
                   </div>
@@ -1277,12 +1281,12 @@ function ParcelaView() {
         <div>
           <div className={styles.weatherPanel}>
             <div className={styles.weatherHeader}>
-              <p className={styles.weatherTitle}>Vreme</p>
+              <p className={styles.weatherTitle}>{t('parcela.weather.title')}</p>
             </div>
-            <p className={styles.weatherSource}>OpenMeteo · Včeraj–7 dni</p>
+            <p className={styles.weatherSource}>{t('parcela.weather.source')}</p>
             <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: '0 0 16px' }} />
 
-            {weatherLoading && <p className={styles.weatherLoading}>Nalagam vremensko napoved ...</p>}
+            {weatherLoading && <p className={styles.weatherLoading}>{t('parcela.weather.loading')}</p>}
 
             {weather.length > 0 && (
               <>
@@ -1291,7 +1295,7 @@ function ParcelaView() {
                     <span style={{ fontSize: 28 }}>{weatherIcon(weather[0].weatherCode)}</span>
                     <div>
                       <p className={styles.weatherCurrentTemp}>{Math.round(weather[0].maxTemp)}°C</p>
-                      <p className={styles.weatherCurrentDesc}>{weatherDescription(weather[0].weatherCode)} · Danes</p>
+                      <p className={styles.weatherCurrentDesc}>{t(weatherDescriptionKey(weather[0].weatherCode))} · {t('parcela.weather.today')}</p>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
@@ -1299,7 +1303,7 @@ function ParcelaView() {
                       <Droplets size={14} style={{ marginRight: 2, verticalAlign: -2 }} />
                       {weather[0].precipitation}%
                     </p>
-                    <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>dežja</p>
+                    <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>{t('parcela.weather.rain')}</p>
                   </div>
                 </div>
 
@@ -1310,7 +1314,7 @@ function ParcelaView() {
                     ? '#e2e8f0'
                     : `rgba(59, 130, 246, ${alpha})`;
 
-                  const dayLabel = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : day.dayName;
+                  const dayLabel = i === 0 ? t('parcela.weather.today') : i === 1 ? t('parcela.weather.tomorrow') : t(day.dayName);
 
                   return (
                     <div key={day.date} className={styles.weatherDayRow} style={{ animationDelay: `${i * 60}ms` }}>
@@ -1338,7 +1342,7 @@ function ParcelaView() {
 
           {center && (
             <div className={styles.locationPanel} onClick={() => navigate('/map', { state: { selectedId: id } })} style={{ cursor: 'pointer' }}>
-              <p className={styles.locationTitle}>Lokacija</p>
+              <p className={styles.locationTitle}>{t('parcela.location')}</p>
               <div className={styles.locationMap}>
                 <MapContainer
                   bounds={parcela.pts}
