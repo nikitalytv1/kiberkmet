@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  parcele   Parcela[]
+}
+
+model Parcela {
+  id          String    @id @default(uuid())
+  name        String?
+  color       String?
+  gerk_pid    BigInt?
+  typeOfUse   String    @default("Ostalo") @db.VarChar(100)
+  plannedCropName    String?   @db.VarChar(100)
+  plannedCropPercent Float?
+  coordinates Unsupported("geometry(Polygon, 4326)")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  userId      String?
+  user        User?      @relation(fields: [userId], references: [id])
+
+  analize     Analiza[]
+  pridelki    Pridelek[]
+  cropPlans   CropPlan[]
+}
+
+model CropPlan {
+  id          String   @id @default(uuid())
+  cropName    String   @db.VarChar(100)
+  areaPercent Float
+  plantedAmountKg Float?
+  plantingDate DateTime?
+  harvestDate  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parcelaId   String
+  parcela     Parcela  @relation(fields: [parcelaId], references: [id])
+}
+
+model Analiza {
+  id                  String   @id @default(uuid())
+  lon                 Float
+  lat                 Float
+  physicalSoil        Json?    // bdod, clay, cfvo, sand, silt, wv0010, wv0033, wv1500
+  chemicalProperties  Json?    // phh2o, cec, nitrogen, soc
+  soilClassification  Json?    // WRB klasifikacija
+  derivedProperties   Json?    // ocd, ocs
+  fetchedAt           DateTime @default(now())
+
+  parcelaId           String
+  parcela             Parcela  @relation(fields: [parcelaId], references: [id])
+}
+
+model Pridelek {
+  id          String   @id @default(uuid())
+  naziv       String               // ime pridelka (pšenica, koruza...)
+  leto        Int                  // leto pridelave
+  povrsina    Float?               // površina v ha
+  kolicina    Float?               // količina v tonah
+  rawData     Json?                // originalni JSON iz stat.si
+  createdAt   DateTime @default(now())
+
+  parcelaId   String
+  parcela     Parcela  @relation(fields: [parcelaId], references: [id])
+}

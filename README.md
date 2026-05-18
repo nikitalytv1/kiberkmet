@@ -16,3 +16,16 @@ The project presents a digital twin for soil analysis in agriculture.
 - Nikita Lytvynenko
 - Kevin Ornik
 - Gašper Potočnik
+
+## Pravila pred pushanjem
+
+```bash
+cd backend
+npx eslint . --fix
+```
+
+```bash
+cd frontend
+npx eslint src --fix
+```
+
