@@ -73,6 +73,24 @@ export async function logout(): Promise<void> {
   await fetch('/api/users/logout', { method: 'POST' });
 }
 
+export async function refreshTokens(): Promise<boolean> {
+  const token = getRefreshToken();
+  if (!token) return false;
+  try {
+    const res = await fetch('/api/users/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: token }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    setTokens(data.accessToken, data.refreshToken);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function changePassword(payload: { currentPassword: string; newPassword: string }): Promise<void> {
   const { fetchWithAuth } = await import('./fetchWithAuth');
   const res = await fetchWithAuth('/api/users/me/password', {

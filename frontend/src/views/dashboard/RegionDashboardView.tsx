@@ -212,7 +212,10 @@ function RegionDashboardView() {
 
         <select
           value={normalizedRegionCode}
-          onChange={event => navigate(`/regions/${event.target.value}`)}
+          onChange={event => {
+            localStorage.setItem('lastRegion', event.target.value);
+            navigate(`/regions/${event.target.value}`);
+          }}
           style={{
             minWidth: 240,
             height: 42,
