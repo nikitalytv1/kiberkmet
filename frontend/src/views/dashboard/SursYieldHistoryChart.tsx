@@ -168,26 +168,29 @@ export default function SursYieldHistoryChart({ stats }: Props) {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+      <select
+        value={selectedCropCode ?? ''}
+        onChange={e => setSelectedCropCode(e.target.value)}
+        style={{
+          marginBottom: 14,
+          height: 36,
+          padding: '0 10px',
+          borderRadius: 8,
+          border: '1px solid #dbe5df',
+          background: '#ffffff',
+          color: '#12382d',
+          fontWeight: 700,
+          fontSize: 13,
+          cursor: 'pointer',
+          minWidth: 220,
+        }}
+      >
         {uniqueStats.map(item => (
-          <button
-            key={item.cropCode}
-            onClick={() => setSelectedCropCode(item.cropCode)}
-            style={{
-              fontSize: 11,
-              fontWeight: 800,
-              padding: '5px 12px',
-              borderRadius: 20,
-              border: 'none',
-              cursor: 'pointer',
-              background: selected?.cropCode === item.cropCode ? '#0f6b4f' : '#f1f5f9',
-              color: selected?.cropCode === item.cropCode ? '#ffffff' : '#64748b',
-            }}
-          >
+          <option key={item.cropCode} value={item.cropCode}>
             {item.cropName}
-          </button>
+          </option>
         ))}
-      </div>
+      </select>
       <svg ref={ref} width="100%" height={280} style={{ display: 'block', overflow: 'visible' }} />
     </div>
   );

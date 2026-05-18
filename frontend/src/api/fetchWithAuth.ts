@@ -1,24 +1,6 @@
-import { getAccessToken, getRefreshToken, setTokens, clearTokens } from './auth';
+import { getAccessToken, clearTokens, refreshTokens } from './auth';
 
 let refreshing: Promise<boolean> | null = null;
-
-async function doRefresh(): Promise<boolean> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return false;
-  try {
-    const res = await fetch('/api/users/refresh', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    });
-    if (!res.ok) return false;
-    const data = await res.json();
-    setTokens(data.accessToken, data.refreshToken);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 export async function fetchWithAuth(input: string, init: RequestInit = {}): Promise<Response> {
   const token = getAccessToken();
@@ -28,13 +10,11 @@ export async function fetchWithAuth(input: string, init: RequestInit = {}): Prom
   let res = await fetch(input, { ...init, headers });
 
   if (res.status === 401) {
-    // Only one concurrent refresh
-    if (!refreshing) refreshing = doRefresh().finally(() => { refreshing = null; });
+    if (!refreshing) refreshing = refreshTokens().finally(() => { refreshing = null; });
     const ok = await refreshing;
 
     if (ok) {
-      const newToken = getAccessToken();
-      headers.set('Authorization', `Bearer ${newToken}`);
+      headers.set('Authorization', `Bearer ${getAccessToken()}`);
       res = await fetch(input, { ...init, headers });
     } else {
       clearTokens();

@@ -4,9 +4,9 @@ import {
   LoginPayload,
   LoginResponse,
   getAccessToken,
-  getRefreshToken,
   setTokens,
   clearTokens,
+  refreshTokens,
 } from '../api/auth';
 
 interface AuthContextValue {
@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
       .then(async (res) => {
         if (res.status === 401) {
-          const refreshed = await tryRefresh();
+          const refreshed = await refreshTokens();
           if (refreshed) {
             const res2 = await fetch('/api/users/me', {
               headers: { Authorization: `Bearer ${getAccessToken()}` },
@@ -91,22 +91,4 @@ export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
   return ctx;
-}
-
-async function tryRefresh(): Promise<boolean> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return false;
-  try {
-    const res = await fetch('/api/users/refresh', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    });
-    if (!res.ok) return false;
-    const data = await res.json();
-    setTokens(data.accessToken, data.refreshToken);
-    return true;
-  } catch {
-    return false;
-  }
 }
