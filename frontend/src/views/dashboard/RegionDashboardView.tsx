@@ -9,6 +9,7 @@ import { COLORS } from '../map/types';
 import ParcelaBarChart, { BarItem } from './ParcelaBarChart';
 import RabaDonutChart, { DonutSlice } from './RabaDonutChart';
 import SursYieldHistoryChart, { SursYieldStats } from './SursYieldHistoryChart';
+import { useLanguage } from '../../context/LanguageContext';
 
 type SoilLayer = {
   name: string;
@@ -67,16 +68,18 @@ function getSoilValue(analysis: ParcelaAnalysis | null | undefined, name: string
   return Number((value / (scales[name] ?? 1)).toFixed(2));
 }
 
-function getSoilTextureClass(sand: number | null, silt: number | null, clay: number | null) {
+type SoilTextureKey = 'soil.clay' | 'soil.sand' | 'soil.silt' | 'soil.loam' | 'soil.sandyLoam' | 'soil.clayLoam' | 'soil.siltyLoam' | 'soil.mixed';
+
+function getSoilTextureKey(sand: number | null, silt: number | null, clay: number | null): SoilTextureKey | null {
   if (sand == null || silt == null || clay == null) return null;
-  if (clay >= 40) return 'Glinena tla';
-  if (sand >= 70) return 'Peščena tla';
-  if (silt >= 70) return 'Meljasta tla';
-  if (sand >= 40 && sand <= 60 && clay >= 10 && clay <= 30 && silt >= 20 && silt <= 50) return 'Ilovnata tla';
-  if (sand > 55 && clay < 25) return 'Peščeno-ilovnata tla';
-  if (clay >= 30 && clay < 40) return 'Glineno-ilovnata tla';
-  if (silt >= 50 && clay < 30) return 'Meljasto-ilovnata tla';
-  return 'Mešana tekstura tal';
+  if (clay >= 40) return 'soil.clay';
+  if (sand >= 70) return 'soil.sand';
+  if (silt >= 70) return 'soil.silt';
+  if (sand >= 40 && sand <= 60 && clay >= 10 && clay <= 30 && silt >= 20 && silt <= 50) return 'soil.loam';
+  if (sand > 55 && clay < 25) return 'soil.sandyLoam';
+  if (clay >= 30 && clay < 40) return 'soil.clayLoam';
+  if (silt >= 50 && clay < 30) return 'soil.siltyLoam';
+  return 'soil.mixed';
 }
 
 function formatHectares(value: number | null | undefined) {
@@ -90,6 +93,7 @@ function formatNumber(value: number) {
 
 function RegionDashboardView() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { regionCode = '08' } = useParams();
   const normalizedRegionCode = regionCode.padStart(2, '0');
   const [regions, setRegions] = useState<StatisticalRegion[]>([]);
@@ -152,6 +156,7 @@ function RegionDashboardView() {
           const clay = getSoilValue(p.analysis, 'clay');
           const water33 = getSoilValue(p.analysis, 'wv0033');
 
+          const soilKey = getSoilTextureKey(sand, silt, clay);
           return {
             id: p.id,
             name: p.typeOfUse ? String(p.typeOfUse) : 'Parcela',
@@ -160,7 +165,7 @@ function RegionDashboardView() {
             area: formatHectares(p.areaHectares),
             ph,
             vlaga: water33,
-            tip_tal: getSoilTextureClass(sand, silt, clay),
+            tip_tal: soilKey ? t(soilKey) : null,
           };
         }));
       })
@@ -188,9 +193,9 @@ function RegionDashboardView() {
   const phValues = parcele.map(p => p.ph).filter((value): value is number => value != null);
 
   const stats = [
-    { label: 'Skupaj parcel', value: loading ? '-' : String(parcele.length), sub: selectedRegion?.name ?? 'statistična regija' },
-    { label: 'Skupna površina', value: totalArea > 0 ? `${formatNumber(totalArea)} ha` : '-', sub: totalArea > 0 ? 'izrisanih parcel' : 'ni podatka' },
-    { label: 'Povprečni pH', value: phValues.length > 0 ? formatNumber(phValues.reduce((sum, value) => sum + value, 0) / phValues.length) : '-', sub: phValues.length > 0 ? `${phValues.length} analiz` : 'ni podatka' },
+    { label: t('region.stat.totalParcels'), value: loading ? '-' : String(parcele.length), sub: selectedRegion?.name ?? t('region.stat.region') },
+    { label: t('region.stat.totalArea'), value: totalArea > 0 ? `${formatNumber(totalArea)} ha` : '-', sub: totalArea > 0 ? t('region.stat.totalArea.sub') : t('region.stat.noData') },
+    { label: t('region.stat.avgPh'), value: phValues.length > 0 ? formatNumber(phValues.reduce((sum, value) => sum + value, 0) / phValues.length) : '-', sub: phValues.length > 0 ? `${phValues.length} ${t('region.stat.avgPh.sub')}` : t('region.stat.noData') },
   ];
 
   const regionOptions = useMemo(() => (
@@ -201,8 +206,8 @@ function RegionDashboardView() {
     <div className={styles.page}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 20 }}>
         <div>
-          <p className={styles.detailEyebrow}>Statistična regija</p>
-          <h1 className={styles.title}>{selectedRegion?.name ?? 'Regijski dashboard'}</h1>
+          <p className={styles.detailEyebrow}>{t('region.eyebrow')}</p>
+          <h1 className={styles.title}>{selectedRegion?.name ?? t('region.title')}</h1>
         </div>
 
         <select
@@ -240,14 +245,14 @@ function RegionDashboardView() {
       <div style={{ display: 'flex', gap: 16 }}>
         {donutSlices.length > 0 && (
           <div className={styles.statCard} style={{ padding: '20px 22px', flex: 1, minWidth: 0 }}>
-            <p className={styles.statLabel} style={{ marginBottom: 14 }}>Porazdelitev tipov rabe tal</p>
+            <p className={styles.statLabel} style={{ marginBottom: 14 }}>{t('region.chart.landUse')}</p>
             <RabaDonutChart slices={donutSlices} />
           </div>
         )}
 
         {barItems.length > 1 && (
           <div className={styles.statCard} style={{ padding: '20px 22px', flex: 1, minWidth: 0 }}>
-            <p className={styles.statLabel} style={{ marginBottom: 14 }}>Primerjava parcel v regiji</p>
+            <p className={styles.statLabel} style={{ marginBottom: 14 }}>{t('region.chart.comparison')}</p>
             <ParcelaBarChart items={barItems} onClickItem={() => {}} />
           </div>
         )}
@@ -256,10 +261,8 @@ function RegionDashboardView() {
       <section className={styles.chartPanel} style={{ marginTop: 0 }}>
         <div className={styles.chartHeader}>
           <div>
-            <p className={styles.chartTitle}>Zgodovinski pridelek</p>
-            <p className={styles.chartSub}>
-              SURS donos po letih za kulture v izbrani statistični regiji, z napovedjo naslednjega leta
-            </p>
+            <p className={styles.chartTitle}>{t('region.chart.history')}</p>
+            <p className={styles.chartSub}>{t('region.chart.history.sub')}</p>
           </div>
         </div>
         <div className={styles.chartBox} style={{ height: 340 }}>
@@ -270,17 +273,15 @@ function RegionDashboardView() {
 
       <div className={styles.parceleGrid} style={{ marginTop: 0 }}>
         {loading ? (
-          <p className={styles.empty}>Nalagam parcele v regiji ...</p>
+          <p className={styles.empty}>{t('region.loading')}</p>
         ) : parcele.length === 0 ? (
           <div className={styles.regionEmptyState}>
             <div className={styles.regionEmptyIcon}>
               <MapPinned size={24} />
             </div>
             <div>
-              <p className={styles.regionEmptyTitle}>V tej regiji še ni parcel</p>
-              <p className={styles.regionEmptyText}>
-                Zgodovinski SURS graf je vseeno na voljo zgoraj. Ko narišeš parcelo v tej regiji, se bodo tukaj prikazale še analize tal in primerjave parcel.
-              </p>
+              <p className={styles.regionEmptyTitle}>{t('region.empty.title')}</p>
+              <p className={styles.regionEmptyText}>{t('region.empty.text')}</p>
             </div>
           </div>
         ) : (

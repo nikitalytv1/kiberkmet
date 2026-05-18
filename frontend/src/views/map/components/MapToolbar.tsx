@@ -1,12 +1,7 @@
 import { useMap } from 'react-leaflet';
 import { Hand, Pencil, Trash2, Plus, Minus } from 'lucide-react';
 import styles from '../map.module.css';
-
-const tools = [
-  { id: 'move',   icon: Hand,   label: 'Premikanje' },
-  { id: 'draw',   icon: Pencil, label: 'Nariši parcelo' },
-  { id: 'delete', icon: Trash2, label: 'Izbriši' },
-];
+import { useLanguage } from '../../../context/LanguageContext';
 
 export function MapToolbar({
   activeTool,
@@ -20,6 +15,14 @@ export function MapToolbar({
   onToolClick: (id: string) => void;
 }) {
   const map = useMap();
+  const { t } = useLanguage();
+
+  const tools = [
+    { id: 'move',   icon: Hand,   label: t('map.tool.move') },
+    { id: 'draw',   icon: Pencil, label: t('map.tool.draw') },
+    { id: 'delete', icon: Trash2, label: t('map.tool.delete') },
+  ];
+
   return (
     <div className={styles.toolbar}>
       {tools.map(({ id, icon: Icon, label }) => (
@@ -51,8 +54,8 @@ export function MapToolbar({
         </button>
       ))}
       <div className={styles.toolDivider} />
-      <button className={styles.toolBtn} title="Povečaj"   onClick={() => map.zoomIn()}><Plus  size={16} /></button>
-      <button className={styles.toolBtn} title="Pomanjšaj" onClick={() => map.zoomOut()}><Minus size={16} /></button>
+      <button className={styles.toolBtn} title={t('map.zoom.in')}  onClick={() => map.zoomIn()}><Plus  size={16} /></button>
+      <button className={styles.toolBtn} title={t('map.zoom.out')} onClick={() => map.zoomOut()}><Minus size={16} /></button>
     </div>
   );
 }

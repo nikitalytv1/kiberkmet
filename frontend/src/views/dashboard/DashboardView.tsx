@@ -6,6 +6,7 @@ import { getParcele, ParcelaAnalysis } from '../../api/parcele';
 import { COLORS } from '../map/types';
 import ParcelaBarChart, { BarItem } from './ParcelaBarChart';
 import RabaDonutChart, { DonutSlice } from './RabaDonutChart';
+import { useLanguage } from '../../context/LanguageContext';
 
 type SoilLayer = {
   name: string;
@@ -64,16 +65,18 @@ function getSoilValue(analysis: ParcelaAnalysis | null | undefined, name: string
   return Number((value / (scales[name] ?? 1)).toFixed(2));
 }
 
-function getSoilTextureClass(sand: number | null, silt: number | null, clay: number | null) {
+type SoilTextureKey = 'soil.clay' | 'soil.sand' | 'soil.silt' | 'soil.loam' | 'soil.sandyLoam' | 'soil.clayLoam' | 'soil.siltyLoam' | 'soil.mixed';
+
+function getSoilTextureKey(sand: number | null, silt: number | null, clay: number | null): SoilTextureKey | null {
   if (sand == null || silt == null || clay == null) return null;
-  if (clay >= 40) return 'Glinena tla';
-  if (sand >= 70) return 'Peščena tla';
-  if (silt >= 70) return 'Meljasta tla';
-  if (sand >= 40 && sand <= 60 && clay >= 10 && clay <= 30 && silt >= 20 && silt <= 50) return 'Ilovnata tla';
-  if (sand > 55 && clay < 25) return 'Peščeno-ilovnata tla';
-  if (clay >= 30 && clay < 40) return 'Glineno-ilovnata tla';
-  if (silt >= 50 && clay < 30) return 'Meljasto-ilovnata tla';
-  return 'Mešana tekstura tal';
+  if (clay >= 40) return 'soil.clay';
+  if (sand >= 70) return 'soil.sand';
+  if (silt >= 70) return 'soil.silt';
+  if (sand >= 40 && sand <= 60 && clay >= 10 && clay <= 30 && silt >= 20 && silt <= 50) return 'soil.loam';
+  if (sand > 55 && clay < 25) return 'soil.sandyLoam';
+  if (clay >= 30 && clay < 40) return 'soil.clayLoam';
+  if (silt >= 50 && clay < 30) return 'soil.siltyLoam';
+  return 'soil.mixed';
 }
 
 function formatHectares(value: number | null | undefined) {
@@ -85,10 +88,11 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat('sl-SI', { maximumFractionDigits: 1 }).format(value);
 }
 
-function getStatusLabel(warnings: number) {
-  if (warnings === 0) return 'V redu';
-  if (warnings === 1) return '1 opoz.';
-  return `${warnings} opoz.`;
+type StatusLabelKey = 'dashboard.status.ok' | 'dashboard.status.warn';
+
+function getStatusLabelKey(warnings: number): { key: StatusLabelKey; count?: number } {
+  if (warnings === 0) return { key: 'dashboard.status.ok' };
+  return { key: 'dashboard.status.warn', count: warnings };
 }
 
 function outsideRange(value: number | null, min: number, max: number) {
@@ -97,6 +101,7 @@ function outsideRange(value: number | null, min: number, max: number) {
 
 function DashboardView() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [parcele, setParcele] = useState<ParcelaItem[]>([]);
   const [barItems, setBarItems] = useState<BarItem[]>([]);
   const [donutSlices, setDonutSlices] = useState<DonutSlice[]>([]);
@@ -149,6 +154,8 @@ function DashboardView() {
                 ? 'bad'
                 : 'warn';
 
+          const soilKey = getSoilTextureKey(sand, silt, clay);
+          const statusLabelInfo = getStatusLabelKey(warnings);
           return {
             id: p.id,
             name: p.name || p.gerk_pid || 'Parcela',
@@ -157,29 +164,33 @@ function DashboardView() {
             area: formatHectares(p.areaHectares),
             ph,
             vlaga: water33,
-            tip_tal: getSoilTextureClass(sand, silt, clay),
+            tip_tal: soilKey ? t(soilKey) : null,
             status,
-            statusLabel: !p.analysis ? 'Analiza teče' : getStatusLabel(warnings),
+            statusLabel: !p.analysis
+              ? t('dashboard.analysis.running')
+              : statusLabelInfo.count != null
+                ? `${statusLabelInfo.count} ${t(statusLabelInfo.key)}`
+                : t(statusLabelInfo.key),
           };
         }));
       })
-      .catch(err => console.error('Napaka pri nalaganju parcel:', err));
-  }, []);
+      .catch(err => console.error(t('dashboard.error.load'), err));
+  }, [t]);
 
   const totalArea = areaValues.reduce((sum, value) => sum + value, 0);
   const phValues = parcele.map(p => p.ph).filter((value): value is number => value != null);
   const warningCount = parcele.filter(p => p.status === 'warn' || p.status === 'bad').length;
 
   const stats = [
-    { label: 'Skupaj parcel', value: parcele.length > 0 ? String(parcele.length) : '-', sub: 'vseh parcel' },
-    { label: 'Skupna površina', value: totalArea > 0 ? `${formatNumber(totalArea)} ha` : '-', sub: totalArea > 0 ? 'izrisanih parcel' : 'ni podatka' },
-    { label: 'Povprečni pH', value: phValues.length > 0 ? formatNumber(phValues.reduce((sum, value) => sum + value, 0) / phValues.length) : '-', sub: phValues.length > 0 ? `${phValues.length} analiz` : 'ni podatka' },
-    { label: 'Opozorila', value: warningCount > 0 ? String(warningCount) : '0', sub: warningCount > 0 ? 'parcel za pregled' : 'brez opozoril' },
+    { label: t('dashboard.stat.totalParcels'), value: parcele.length > 0 ? String(parcele.length) : '-', sub: t('dashboard.stat.totalParcels.sub') },
+    { label: t('dashboard.stat.totalArea'), value: totalArea > 0 ? `${formatNumber(totalArea)} ha` : '-', sub: totalArea > 0 ? t('dashboard.stat.totalArea.sub') : t('dashboard.stat.noData') },
+    { label: t('dashboard.stat.avgPh'), value: phValues.length > 0 ? formatNumber(phValues.reduce((sum, value) => sum + value, 0) / phValues.length) : '-', sub: phValues.length > 0 ? `${phValues.length} ${t('dashboard.stat.avgPh.sub')}` : t('dashboard.stat.noData') },
+    { label: t('dashboard.stat.warnings'), value: warningCount > 0 ? String(warningCount) : '0', sub: warningCount > 0 ? t('dashboard.stat.warnings.sub') : t('dashboard.stat.noWarnings') },
   ];
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>Moje parcele</h1>
+      <h1 className={styles.title}>{t('dashboard.title')}</h1>
 
       <div className={styles.statsGrid}>
         {stats.map(({ label, value, sub }) => (
@@ -194,14 +205,14 @@ function DashboardView() {
       <div style={{ display: 'flex', gap: 16 }}>
         {donutSlices.length > 0 && (
           <div className={styles.statCard} style={{ padding: '20px 22px', flex: 1, minWidth: 0 }}>
-            <p className={styles.statLabel} style={{ marginBottom: 14 }}>Porazdelitev tipov rabe tal</p>
+            <p className={styles.statLabel} style={{ marginBottom: 14 }}>{t('dashboard.chart.landUse')}</p>
             <RabaDonutChart slices={donutSlices} />
           </div>
         )}
 
         {barItems.length > 1 && (
           <div className={styles.statCard} style={{ padding: '20px 22px', flex: 1, minWidth: 0 }}>
-            <p className={styles.statLabel} style={{ marginBottom: 14 }}>Primerjava parcel</p>
+            <p className={styles.statLabel} style={{ marginBottom: 14 }}>{t('dashboard.chart.comparison')}</p>
             <ParcelaBarChart items={barItems} onClickItem={id => navigate(`/dashboard/${id}`)} />
           </div>
         )}
@@ -210,7 +221,7 @@ function DashboardView() {
 
       <div className={styles.parceleGrid} style={{ marginTop: 20 }}>
         {parcele.length === 0 ? (
-          <p className={styles.empty}>Ni še nobene parcele. Nariši jo na zemljevidu.</p>
+          <p className={styles.empty}>{t('dashboard.empty')}</p>
         ) : (
           parcele.map(p => (
             <ParcelaCard key={p.id} parcela={p} onClick={() => navigate(`/dashboard/${p.id}`)} />

@@ -2,17 +2,11 @@ import { useState } from 'react';
 import { User, Lock, Globe, Trash2 } from 'lucide-react';
 import styles from './settings.module.css';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { updateProfile, changePassword } from '../../api/auth';
 import { useNavigate } from 'react-router-dom';
 
 type Tab = 'profile' | 'security' | 'language' | 'danger';
-
-const tabs: { id: Tab; label: string; icon: typeof User }[] = [
-  { id: 'profile',  label: 'Profil',          icon: User },
-  { id: 'security', label: 'Varnost',          icon: Lock },
-  { id: 'language', label: 'Jezik',            icon: Globe },
-  { id: 'danger',   label: 'Nevarno območje',  icon: Trash2 },
-];
 
 function Label({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return (
@@ -23,13 +17,13 @@ function Label({ children, hint }: { children: React.ReactNode; hint?: string })
   );
 }
 
-
 function initials(name: string) {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 }
 
 function ProfileTab() {
   const { user, refreshUser } = useAuth();
+  const { t } = useLanguage();
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
   const [saving, setSaving] = useState(false);
@@ -45,7 +39,7 @@ function ProfileTab() {
       refreshUser(updated);
       setSuccess(true);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Napaka pri shranjevanju.');
+      setError(err instanceof Error ? err.message : t('profile.error'));
     } finally {
       setSaving(false);
     }
@@ -54,7 +48,7 @@ function ProfileTab() {
   return (
     <>
       <div className={styles.section}>
-        <p className={styles.sectionTitle}>Avatar</p>
+        <p className={styles.sectionTitle}>{t('profile.section.avatar')}</p>
         <div className={styles.avatarRow}>
           <div className={styles.avatar}>{user ? initials(user.name) : '?'}</div>
           <div>
@@ -65,19 +59,19 @@ function ProfileTab() {
       </div>
 
       <div className={styles.section}>
-        <p className={styles.sectionTitle}>Osebni podatki</p>
+        <p className={styles.sectionTitle}>{t('profile.section.personal')}</p>
         <div className={styles.field}>
-          <Label hint="Ime in priimek">Ime</Label>
+          <Label hint={t('profile.field.name.hint')}>{t('profile.field.name')}</Label>
           <input className={styles.input} value={name} onChange={e => setName(e.target.value)} />
         </div>
         <div className={styles.field}>
-          <Label hint="Uporablja se za prijavo in obvestila">E-pošta</Label>
+          <Label hint={t('profile.field.email.hint')}>{t('profile.field.email')}</Label>
           <input className={styles.input} value={email} onChange={e => setEmail(e.target.value)} />
         </div>
         {error && <p className={styles.formError}>{error}</p>}
-        {success && <p className={styles.formSuccess}>Shranjeno.</p>}
+        {success && <p className={styles.formSuccess}>{t('profile.saved')}</p>}
         <button className={styles.btnPrimary} onClick={handleSave} disabled={saving}>
-          {saving ? 'Shranjujem ...' : 'Shrani'}
+          {saving ? t('profile.saving') : t('profile.save')}
         </button>
       </div>
     </>
@@ -85,6 +79,7 @@ function ProfileTab() {
 }
 
 function SecurityTab() {
+  const { t } = useLanguage();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -95,15 +90,15 @@ function SecurityTab() {
   async function handleSave() {
     setError(null);
     setSuccess(false);
-    if (next !== confirm) { setError('Novi gesli se ne ujemata.'); return; }
-    if (next.length < 8) { setError('Novo geslo mora imeti vsaj 8 znakov.'); return; }
+    if (next !== confirm) { setError(t('security.error.mismatch')); return; }
+    if (next.length < 8) { setError(t('security.error.short')); return; }
     setSaving(true);
     try {
       await changePassword({ currentPassword: current, newPassword: next });
       setSuccess(true);
       setCurrent(''); setNext(''); setConfirm('');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Napaka pri spremembi gesla.');
+      setError(err instanceof Error ? err.message : t('security.error.generic'));
     } finally {
       setSaving(false);
     }
@@ -111,52 +106,64 @@ function SecurityTab() {
 
   return (
     <div className={styles.section}>
-      <p className={styles.sectionTitle}>Geslo</p>
+      <p className={styles.sectionTitle}>{t('security.section.password')}</p>
       <div className={styles.field}>
-        <Label>Trenutno geslo</Label>
+        <Label>{t('security.currentPassword')}</Label>
         <input className={styles.input} type="password" placeholder="••••••••" value={current} onChange={e => setCurrent(e.target.value)} />
       </div>
       <div className={styles.field}>
-        <Label>Novo geslo</Label>
+        <Label>{t('security.newPassword')}</Label>
         <input className={styles.input} type="password" placeholder="••••••••" value={next} onChange={e => setNext(e.target.value)} />
       </div>
       <div className={styles.field}>
-        <Label>Potrdi novo geslo</Label>
+        <Label>{t('security.confirmPassword')}</Label>
         <input className={styles.input} type="password" placeholder="••••••••" value={confirm} onChange={e => setConfirm(e.target.value)} />
       </div>
       {error && <p className={styles.formError}>{error}</p>}
-      {success && <p className={styles.formSuccess}>Geslo uspešno posodobljeno.</p>}
+      {success && <p className={styles.formSuccess}>{t('security.success')}</p>}
       <button className={styles.btnPrimary} onClick={handleSave} disabled={saving}>
-        {saving ? 'Posodabljam ...' : 'Posodobi geslo'}
+        {saving ? t('security.updating') : t('security.update')}
       </button>
     </div>
   );
 }
 
 function LanguageTab() {
-  const [lang, setLang] = useState('sl');
+  const { lang, setLang, t } = useLanguage();
+  const [selected, setSelected] = useState(lang);
+  const [saved, setSaved] = useState(false);
+
+  function handleSave() {
+    setLang(selected);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
 
   return (
     <div className={styles.section}>
-      <p className={styles.sectionTitle}>Jezik</p>
+      <p className={styles.sectionTitle}>{t('language.section')}</p>
       <div className={styles.field}>
-        <Label>Jezik aplikacije</Label>
+        <Label>{t('language.app')}</Label>
         <select
           className={styles.select}
-          value={lang}
-          onChange={e => setLang(e.target.value)}
+          value={selected}
+          onChange={e => { setSelected(e.target.value as 'sl' | 'en'); setSaved(false); }}
         >
           <option value="sl">🇸🇮 Slovenščina</option>
           <option value="en">🇬🇧 English</option>
         </select>
       </div>
-      <button className={styles.btnPrimary}>Shrani</button>
+      {saved && <p className={styles.formSuccess}>{t('profile.saved')}</p>}
+      <button className={styles.btnPrimary} onClick={handleSave} disabled={selected === lang}>
+        {t('language.save')}
+      </button>
     </div>
   );
 }
 
 function DangerTab() {
   const { logout } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   async function handleLogout() {
@@ -167,31 +174,31 @@ function DangerTab() {
   return (
     <>
     <div className={styles.section}>
-      <p className={styles.sectionTitle}>Seja</p>
+      <p className={styles.sectionTitle}>{t('danger.section.session')}</p>
       <div className={styles.dangerRow}>
         <div>
-          <p className={styles.dangerRowTitle}>Odjava</p>
-          <p className={styles.dangerRowSub}>Zapri trenutno sejo</p>
+          <p className={styles.dangerRowTitle}>{t('danger.logout.title')}</p>
+          <p className={styles.dangerRowSub}>{t('danger.logout.sub')}</p>
         </div>
-        <button className={styles.btnOutline} onClick={handleLogout}>Odjava</button>
+        <button className={styles.btnOutline} onClick={handleLogout}>{t('danger.logout.btn')}</button>
       </div>
     </div>
     <div className={styles.section}>
-      <p className={styles.sectionTitle}>Nevarno območje</p>
+      <p className={styles.sectionTitle}>{t('danger.section.danger')}</p>
       <div className={styles.dangerRow}>
         <div>
-          <p className={styles.dangerRowTitle}>Izbriši vse parcele</p>
-          <p className={styles.dangerRowSub}>Trajno odstrani vse parcele in analize</p>
+          <p className={styles.dangerRowTitle}>{t('danger.deleteParcels.title')}</p>
+          <p className={styles.dangerRowSub}>{t('danger.deleteParcels.sub')}</p>
         </div>
-        <button className={styles.btnDangerOutline}>Izbriši</button>
+        <button className={styles.btnDangerOutline}>{t('danger.deleteParcels.btn')}</button>
       </div>
       <hr className={styles.divider} />
       <div className={styles.dangerRow}>
         <div>
-          <p className={styles.dangerRowTitle}>Izbriši račun</p>
-          <p className={styles.dangerRowSub}>Trajno izbriše vaš račun in vse podatke</p>
+          <p className={styles.dangerRowTitle}>{t('danger.deleteAccount.title')}</p>
+          <p className={styles.dangerRowSub}>{t('danger.deleteAccount.sub')}</p>
         </div>
-        <button className={styles.btnDangerFill}>Izbriši račun</button>
+        <button className={styles.btnDangerFill}>{t('danger.deleteAccount.btn')}</button>
       </div>
     </div>
     </>
@@ -204,12 +211,20 @@ const tabContent: Record<Tab, React.FC> = {
 
 function SettingsLayout() {
   const [active, setActive] = useState<Tab>('profile');
+  const { t } = useLanguage();
   const Content = tabContent[active];
+
+  const tabs: { id: Tab; label: string; icon: typeof User }[] = [
+    { id: 'profile',  label: t('settings.tabs.profile'),   icon: User },
+    { id: 'security', label: t('settings.tabs.security'),  icon: Lock },
+    { id: 'language', label: t('settings.tabs.language'),  icon: Globe },
+    { id: 'danger',   label: t('settings.tabs.danger'),    icon: Trash2 },
+  ];
 
   return (
     <main className={styles.main}>
       <aside className={styles.aside}>
-        <p className={styles.asideLabel}>Nastavitve</p>
+        <p className={styles.asideLabel}>{t('settings.title')}</p>
         {tabs.map(({ id, label, icon: Icon }) => {
           const isDanger = id === 'danger';
           const isActive = active === id;
