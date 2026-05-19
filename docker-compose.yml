@@ -19,7 +19,7 @@ services:
           memory: 400M
 
   backend:
-    build: ./backend
+    image: dogexen/kiberkmet:backend-latest
     ports:
       - "5001:5000"
     depends_on:
@@ -36,7 +36,7 @@ services:
           memory: 256M
 
   migrate:
-    build: ./backend
+    image: dogexen/kiberkmet:backend-latest
     command: npx prisma migrate deploy
     depends_on:
       db:
@@ -45,8 +45,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-kiberkmet}
 
   frontend:
-    build:
-      context: ./frontend
+    image: dogexen/kiberkmet:frontend-latest
     ports:
       - "80:80"
     depends_on:
