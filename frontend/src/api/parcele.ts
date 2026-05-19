@@ -166,6 +166,11 @@ export async function deleteParcela(id: string): Promise<void> {
   }
 }
 
+export async function deleteAllParcele(): Promise<void> {
+  const parcele = await getParcele();
+  await Promise.all(parcele.map(p => deleteParcela(p.id)));
+}
+
 export async function getCropPlans(parcelaId: string): Promise<CropPlan[]> {
   const res = await fetchWithAuth(`/api/parcele/${parcelaId}/crop-plans`);
   const data = await res.json();

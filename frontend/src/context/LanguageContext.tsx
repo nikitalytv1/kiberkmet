@@ -58,6 +58,11 @@ const translations = {
     'danger.deleteAccount.title': 'Izbriši račun',
     'danger.deleteAccount.sub': 'Trajno izbriše vaš račun in vse podatke',
     'danger.deleteAccount.btn': 'Izbriši račun',
+    'danger.deleteParcels.confirm': 'Ste prepričani, da želite izbrisati vse parcele? Tega dejanja ni mogoče razveljaviti.',
+    'danger.deleteParcels.success': 'Vse parcele so bile izbrisane.',
+    'danger.deleteParcels.error': 'Napaka pri brisanju parcel.',
+    'danger.deleteAccount.confirm': 'Ste prepričani, da želite izbrisati račun? Tega dejanja ni mogoče razveljaviti.',
+    'danger.deleteAccount.error': 'Napaka pri brisanju računa.',
 
     // Dashboard
     'dashboard.title': 'Moje parcele',
@@ -297,6 +302,11 @@ const translations = {
     'danger.deleteAccount.title': 'Delete account',
     'danger.deleteAccount.sub': 'Permanently delete your account and all data',
     'danger.deleteAccount.btn': 'Delete account',
+    'danger.deleteParcels.confirm': 'Are you sure you want to delete all parcels? This action cannot be undone.',
+    'danger.deleteParcels.success': 'All parcels have been deleted.',
+    'danger.deleteParcels.error': 'Error deleting parcels.',
+    'danger.deleteAccount.confirm': 'Are you sure you want to delete your account? This action cannot be undone.',
+    'danger.deleteAccount.error': 'Error deleting account.',
 
     // Dashboard
     'dashboard.title': 'My Parcels',
