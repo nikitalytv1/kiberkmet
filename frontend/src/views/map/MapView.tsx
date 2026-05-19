@@ -144,7 +144,7 @@ function MapView() {
   const handleNameConfirm = useCallback((name: string, typeOfUse: string) => {
     if (!pendingPolygon) return;
     const { pts, color } = pendingPolygon;
-    const tempId = crypto.randomUUID();
+    const tempId = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36);
     setDrawError(null);
     setPolygons(prev => [...prev, { id: tempId, pts, color, name }]);
     setPendingPolygon(null);
