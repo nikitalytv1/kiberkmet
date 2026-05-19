@@ -225,50 +225,50 @@ async function assertNoParcelaOverlap(geoJson, userId, excludeId = null) {
   );
 }
 
-const PARCELA_SELECT_FIELDS = `
-  id,
-  name,
-  color,
-  gerk_pid::text,
-  "typeOfUse",
-  "plannedCropName",
-  "plannedCropPercent",
-  (
-    SELECT COALESCE(json_agg(json_build_object(
-      'id', cp.id,
-      'cropName', cp."cropName",
-      'areaPercent', cp."areaPercent",
-      'plantedAmountKg', cp."plantedAmountKg",
-      'plantingDate', cp."plantingDate",
-      'harvestDate', cp."harvestDate",
-      'createdAt', cp."createdAt",
-      'updatedAt', cp."updatedAt"
-    ) ORDER BY cp."createdAt" DESC), '[]'::json)
-    FROM "CropPlan" cp
-    WHERE cp."parcelaId" = "Parcela".id
-  ) AS "cropPlans",
-  ST_AsGeoJSON(coordinates)::json AS coordinates,
-  ST_Area(coordinates::geography) / 10000 AS "areaHectares",
-  "createdAt",
-  "updatedAt",
-  "userId",
-  (
-    SELECT json_build_object(
-      'id', a.id,
-      'lon', a.lon,
-      'lat', a.lat,
-      'physicalSoil', a."physicalSoil",
-      'chemicalProperties', a."chemicalProperties",
-      'soilClassification', a."soilClassification",
-      'derivedProperties', a."derivedProperties",
-      'fetchedAt', a."fetchedAt"
-    )
-    FROM "Analiza" a
-    WHERE a."parcelaId" = "Parcela".id
-    ORDER BY a."fetchedAt" DESC
-    LIMIT 1
-  ) AS analysis
-`;
+// const PARCELA_SELECT_FIELDS = `
+//   id,
+//   name,
+//   color,
+//   gerk_pid::text,
+//   "typeOfUse",
+//   "plannedCropName",
+//   "plannedCropPercent",
+//   (
+//     SELECT COALESCE(json_agg(json_build_object(
+//       'id', cp.id,
+//       'cropName', cp."cropName",
+//       'areaPercent', cp."areaPercent",
+//       'plantedAmountKg', cp."plantedAmountKg",
+//       'plantingDate', cp."plantingDate",
+//       'harvestDate', cp."harvestDate",
+//       'createdAt', cp."createdAt",
+//       'updatedAt', cp."updatedAt"
+//     ) ORDER BY cp."createdAt" DESC), '[]'::json)
+//     FROM "CropPlan" cp
+//     WHERE cp."parcelaId" = "Parcela".id
+//   ) AS "cropPlans",
+//   ST_AsGeoJSON(coordinates)::json AS coordinates,
+//   ST_Area(coordinates::geography) / 10000 AS "areaHectares",
+//   "createdAt",
+//   "updatedAt",
+//   "userId",
+//   (
+//     SELECT json_build_object(
+//       'id', a.id,
+//       'lon', a.lon,
+//       'lat', a.lat,
+//       'physicalSoil', a."physicalSoil",
+//       'chemicalProperties', a."chemicalProperties",
+//       'soilClassification', a."soilClassification",
+//       'derivedProperties', a."derivedProperties",
+//       'fetchedAt', a."fetchedAt"
+//     )
+//     FROM "Analiza" a
+//     WHERE a."parcelaId" = "Parcela".id
+//     ORDER BY a."fetchedAt" DESC
+//     LIMIT 1
+//   ) AS analysis
+// `;
 
 async function runParcelaAnalysis(id, userId) {
   const jobKey = `${userId}:${id}`;
