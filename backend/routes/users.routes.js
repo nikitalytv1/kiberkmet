@@ -9,7 +9,6 @@ import {
   updateUser,
   updateMe,
   changePassword,
-  deleteUser,
   logoutUser,
 } from "../controllers/users.controller.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -27,7 +26,6 @@ router.put("/me", requireAuth, updateMe);
 router.put("/me/password", requireAuth, changePassword);
 router.get("/", requireAuth, getUsers);
 router.put("/:id", requireAuth, updateUser);
-router.delete("/:id", requireAuth, deleteUser);
 router.post("/logout", requireAuth, logoutUser);
 
 export default router;
