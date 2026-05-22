@@ -1,0 +1,41 @@
+city "Kranj" {
+  road "Vinograd cesta" {
+    line((46.2380,14.3550),(46.2390,14.3560))
+    bend((46.2390,14.3560),(46.2400,14.3572),33)
+    set("podlaga","asfalt")
+  }
+
+  building "Klet" {
+    box((46.2378,14.3547),(46.2383,14.3552))
+    line((46.2378,14.3547),(46.2383,14.3552))
+    set("tip","vinska klet")
+  }
+
+  field "Vinograd jug" {
+    box((46.2385,14.3554),(46.2402,14.3575))
+    line((46.2385,14.3554),(46.2402,14.3554))
+    set("tip rabe","vinograd")
+    set("procent površine",100)
+    set("načrtovan pridelek","sauvignon")
+  }
+
+  zone "Gorenjska regija" {
+    box((46.2380,14.3550),(46.2405,14.3578))
+    line((46.2380,14.3550),(46.2405,14.3578))
+    set("šifra regije",9)
+  }
+
+  river "Hudournik" {
+    line((46.2382,14.3551),(46.2404,14.3576))
+    bend((46.2391,14.3562),(46.2404,14.3576),27)
+    set("vodno tveganje","visoko")
+  }
+
+  sensor "Vinogradniški senzor" (46.2394,14.3565) {
+    set("ph",7.1)
+    set("organski ogljik",18.5)
+    set("možnost padavin",22)
+  }
+
+  crop "Sauvignon" (46.2395,14.3567)
+}
