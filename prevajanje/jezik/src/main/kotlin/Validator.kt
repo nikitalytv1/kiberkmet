@@ -23,11 +23,21 @@ class Validator {
         val crops = city.elements.filterIsInstance<CropNode>()
         val sensors = city.elements.filterIsInstance<SensorNode>()
 
+        warnDuplicateElementNames(city, issues)
+
         val buildingGeom = buildings.map { it to extractBoxes(it.commands) }
         val roadGeom = roads.map { it to extractSegments(it.commands) }
         val riverGeom = rivers.map { it to extractSegments(it.commands) }
         val fieldGeom = fields.map { it to extractBoxes(it.commands) }
         val zoneGeom = zones.map { it to extractBoxes(it.commands) }
+
+        warnEmptyGeometry(city, "Stavba", buildingGeom, issues)
+        warnEmptyGeometry(city, "Cesta", roadGeom, issues)
+        warnEmptyGeometry(city, "Reka", riverGeom, issues)
+        warnEmptyGeometry(city, "Polje", fieldGeom, issues)
+        warnEmptyGeometry(city, "Cona", zoneGeom, issues)
+        validatePointRanges(city, crops.map { "Kultura '${it.name}'" to it.location }, issues)
+        validatePointRanges(city, sensors.map { "Senzor '${it.name}'" to it.location }, issues)
 
         // 1. Hisa ∩ Hisa
         for (i in buildingGeom.indices) {
@@ -116,6 +126,53 @@ class Validator {
     private data class Rect(val x1: Double, val y1: Double, val x2: Double, val y2: Double)
     private data class Seg(val x1: Double, val y1: Double, val x2: Double, val y2: Double)
 
+    private fun warnDuplicateElementNames(city: CityNode, issues: MutableList<ValidationIssue>) {
+        city.elements
+            .groupBy { it.elementName() }
+            .filterValues { it.size > 1 }
+            .keys
+            .forEach { issues += warn(city, "Ime elementa '$it' je uporabljeno vec kot enkrat") }
+    }
+
+    private fun CityElementNode.elementName(): String = when (this) {
+        is RoadNode -> name
+        is BuildingNode -> name
+        is FieldNode -> name
+        is ZoneNode -> name
+        is RiverNode -> name
+        is SensorNode -> name
+        is CropNode -> name
+    }
+
+    private fun <T, G> warnEmptyGeometry(
+        city: CityNode,
+        label: String,
+        geometries: List<Pair<T, List<G>>>,
+        issues: MutableList<ValidationIssue>
+    ) {
+        for ((element, geometry) in geometries) {
+            if (geometry.isEmpty()) {
+                val name = when (element) {
+                    is CityElementNode -> element.elementName()
+                    else -> "?"
+                }
+                issues += warn(city, "$label '$name' nima geometrije")
+            }
+        }
+    }
+
+    private fun validatePointRanges(
+        city: CityNode,
+        points: List<Pair<String, PointNode>>,
+        issues: MutableList<ValidationIssue>
+    ) {
+        for ((label, point) in points) {
+            if (point.x !in -90.0..90.0 || point.y !in -180.0..180.0) {
+                issues += error(city, "$label ima neveljavne koordinate ${point}")
+            }
+        }
+    }
+
     private fun extractBoxes(commands: List<CommandNode>): List<Rect> =
         commands.filterIsInstance<BoxNode>().map { b ->
             Rect(
@@ -172,12 +229,21 @@ class Validator {
     private fun twoSegsIntersect(a: Seg, b: Seg): Boolean {
         fun cross(ox: Double, oy: Double, ax: Double, ay: Double, bx: Double, by: Double) =
             (ax - ox) * (by - oy) - (ay - oy) * (bx - ox)
+        fun onSegment(ox: Double, oy: Double, ax: Double, ay: Double, bx: Double, by: Double): Boolean =
+            minOf(ox, ax) - EPS <= bx && bx <= maxOf(ox, ax) + EPS &&
+                minOf(oy, ay) - EPS <= by && by <= maxOf(oy, ay) + EPS
 
         val d1 = cross(b.x1, b.y1, b.x2, b.y2, a.x1, a.y1)
         val d2 = cross(b.x1, b.y1, b.x2, b.y2, a.x2, a.y2)
         val d3 = cross(a.x1, a.y1, a.x2, a.y2, b.x1, b.y1)
         val d4 = cross(a.x1, a.y1, a.x2, a.y2, b.x2, b.y2)
-        return d1 * d2 < 0 && d3 * d4 < 0
+
+        if (d1 * d2 < 0 && d3 * d4 < 0) return true
+        if (kotlin.math.abs(d1) <= EPS && onSegment(b.x1, b.y1, b.x2, b.y2, a.x1, a.y1)) return true
+        if (kotlin.math.abs(d2) <= EPS && onSegment(b.x1, b.y1, b.x2, b.y2, a.x2, a.y2)) return true
+        if (kotlin.math.abs(d3) <= EPS && onSegment(a.x1, a.y1, a.x2, a.y2, b.x1, b.y1)) return true
+        if (kotlin.math.abs(d4) <= EPS && onSegment(a.x1, a.y1, a.x2, a.y2, b.x2, b.y2)) return true
+        return false
     }
 
     private fun pointSegDist(px: Double, py: Double, seg: Seg): Double {
@@ -206,11 +272,11 @@ class Validator {
         val dx1 = a.x2 - a.x1; val dy1 = a.y2 - a.y1
         val dx2 = b.x2 - b.x1; val dy2 = b.y2 - b.y1
         val denom = dx1 * dy2 - dy1 * dx2
-        if (Math.abs(denom) < 1e-12) return null
+        if (kotlin.math.abs(denom) < EPS) return null
         val dx3 = b.x1 - a.x1; val dy3 = b.y1 - a.y1
         val t = (dx3 * dy2 - dy3 * dx2) / denom
         val u = (dx3 * dy1 - dy3 * dx1) / denom
-        if (t < -1e-9 || t > 1.0 + 1e-9 || u < -1e-9 || u > 1.0 + 1e-9) return null
+        if (t < -EPS || t > 1.0 + EPS || u < -EPS || u > 1.0 + EPS) return null
         return (a.x1 + t * dx1) to (a.y1 + t * dy1)
     }
 
@@ -219,4 +285,8 @@ class Validator {
 
     private fun warn(city: CityNode, msg: String) =
         ValidationIssue(Severity.WARNING, "[${city.name}] $msg")
+
+    companion object {
+        private const val EPS = 1e-9
+    }
 }
