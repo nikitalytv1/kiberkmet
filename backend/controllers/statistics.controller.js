@@ -1,5 +1,6 @@
 import {
   getRegionForParcela,
+  fetchRegionalYields,
   fetchTopCropsForRegion,
 } from "../services/region.service.js";
 
@@ -30,6 +31,30 @@ export async function getTopCropsByParcela(req, res) {
     };
 
     return res.json(await fetchTopCropsForRegion(region.regionCode, location));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+export async function getYieldStatsByParcela(req, res) {
+  try {
+    const region = await getRegionForParcela(req.params.id, req.user.userId);
+
+    if (!region) {
+      return res.status(404).json({ error: "Parcela not found" });
+    }
+
+    const yieldsByCropCode = await fetchRegionalYields(region.regionCode);
+
+    return res.json({
+      source: "SURS",
+      table: "1502410S",
+      unit: "t/ha",
+      region: region.regionName,
+      regionCode: region.regionCode,
+      stats: Object.values(yieldsByCropCode),
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: err.message });

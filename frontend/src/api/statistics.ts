@@ -23,6 +23,33 @@ export interface TopCropsResponse {
   crops: TopCrop[];
 }
 
+export interface SursYieldStat {
+  cropCode: string;
+  cropName: string;
+  unit: string;
+  history: {
+    year: number;
+    value: number;
+  }[];
+  latest: {
+    year: number;
+    value: number;
+  } | null;
+  prediction: {
+    year: number | null;
+    value: number | null;
+  };
+}
+
+export interface ParcelaYieldStatsResponse {
+  source: string;
+  table: string;
+  unit: string;
+  region: string;
+  regionCode: string;
+  stats: SursYieldStat[];
+}
+
 export async function getRegionalTopCrops(options?: {
   lon?: number | null;
   parcelaId?: string | null;
@@ -50,6 +77,17 @@ export async function getRegionalTopCrops(options?: {
 
   if (!res.ok) {
     throw new Error(data.error || 'Napaka pri nalaganju SURS podatkov.');
+  }
+
+  return data;
+}
+
+export async function getParcelaYieldStats(parcelaId: string): Promise<ParcelaYieldStatsResponse> {
+  const res = await fetchWithAuth(`/api/statistics/yields/parcela/${parcelaId}`);
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || 'Napaka pri nalaganju SURS donosov.');
   }
 
   return data;

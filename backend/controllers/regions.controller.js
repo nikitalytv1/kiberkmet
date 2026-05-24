@@ -13,6 +13,7 @@ export function getRegions(_req, res) {
 
 export async function getParceleByRegion(req, res) {
   const regionCode = String(req.params.regionCode).padStart(2, "0");
+  const userId = req.user.userId;
 
   if (!isValidRegionCode(regionCode)) {
     return res.status(400).json({ error: "Invalid statistical region code" });
@@ -63,7 +64,8 @@ export async function getParceleByRegion(req, res) {
         ) AS analysis
       FROM "Parcela" p
       CROSS JOIN nuts
-      WHERE ST_Intersects(nuts.geom, ST_PointOnSurface(p.coordinates))
+      WHERE p."userId" = ${userId}
+        AND ST_Intersects(nuts.geom, ST_PointOnSurface(p.coordinates))
       ORDER BY p."createdAt" DESC
     `;
 
