@@ -10,6 +10,7 @@ import ParcelaBarChart, { BarItem } from './ParcelaBarChart';
 import RabaDonutChart, { DonutSlice } from './RabaDonutChart';
 import SursYieldHistoryChart, { SursYieldStats } from './SursYieldHistoryChart';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 
 type SoilLayer = {
   name: string;
@@ -94,6 +95,7 @@ function formatNumber(value: number) {
 function RegionDashboardView() {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const { regionCode = '08' } = useParams();
   const normalizedRegionCode = regionCode.padStart(2, '0');
   const [regions, setRegions] = useState<StatisticalRegion[]>([]);
@@ -128,7 +130,8 @@ function RegionDashboardView() {
 
         setSelectedRegion(data.region);
         setYieldStats(data.yieldStats ?? []);
-        setAreaValues(data.parcele.map(p => p.areaHectares).filter((value): value is number => value != null));
+        const myRegionParcele = data.parcele.filter(p => user?.id && p.userId === user.id);
+        setAreaValues(myRegionParcele.map(p => p.areaHectares).filter((value): value is number => value != null));
 
         const rabaMap = new Map<string, number>();
         data.parcele.forEach(p => {
@@ -149,7 +152,7 @@ function RegionDashboardView() {
           area: p.areaHectares ?? null,
         })));
 
-        setParcele(data.parcele.map(p => {
+        setParcele(myRegionParcele.map(p => {
           const ph = getSoilValue(p.analysis, 'phh2o');
           const sand = getSoilValue(p.analysis, 'sand');
           const silt = getSoilValue(p.analysis, 'silt');
@@ -187,7 +190,7 @@ function RegionDashboardView() {
     return () => {
       active = false;
     };
-  }, [normalizedRegionCode]);
+  }, [normalizedRegionCode, user?.id]);
 
   const totalArea = areaValues.reduce((sum, value) => sum + value, 0);
   const phValues = parcele.map(p => p.ph).filter((value): value is number => value != null);

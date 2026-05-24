@@ -14,9 +14,9 @@ import {
 } from 'chart.js';
 import { Bar, Pie } from 'react-chartjs-2';
 import { analyzeParcela, createCropPlan, deleteCropPlan, getParcela, updateCropPlan, updateParcela, ParcelaAnalysis, CropPlan } from '../../api/parcele';
-import { getRegionalTopCrops, TopCropsResponse } from '../../api/statistics';
+import { getParcelaYieldStats, getRegionalTopCrops, SursYieldStat, TopCropsResponse } from '../../api/statistics';
 import { Point } from '../map/types';
-import { CROPS } from '../../data/crops';
+import { CROPS, getCompanionCropNames, getTechnologicalYield } from '../../data/crops';
 import styles from './dashboard.module.css';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
@@ -224,25 +224,92 @@ function formatDate(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
-function parseYieldTonsPerHa(value: string) {
-  const match = value.match(/([\d.]+)\s*t\/ha/i);
-  return match ? Number(match[1]) : null;
-}
-
 function formatMassKg(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return '-';
   if (value >= 1000) return `${formatNumber(value / 1000, 2)} t`;
   return `${formatNumber(value, 1)} kg`;
 }
 
-function getExpectedHarvestKg(plan: CropPlan, areaHectares?: number | null) {
+function normalizeCropName(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function getSursYieldForCrop(cropName: string, stats: SursYieldStat[]) {
+  const crop = CROPS.find(item => normalizeCropName(item.name) === normalizeCropName(cropName));
+  const allowedNames = crop?.sursCropNames ?? [cropName.trim()];
+  const normalizedAllowedNames = allowedNames.map(normalizeCropName);
+
+  return stats.find(stat => normalizedAllowedNames.includes(normalizeCropName(stat.cropName))) ?? null;
+}
+
+function getYieldSourceForCrop(cropName: string, stats: SursYieldStat[]) {
+  const yieldStat = getSursYieldForCrop(cropName, stats);
+  if (yieldStat?.latest?.value != null && Number.isFinite(yieldStat.latest.value)) {
+    return {
+      tonsPerHa: yieldStat.latest.value,
+      label: `SURS ${yieldStat.latest.year}`,
+      detail: `${formatNumber(yieldStat.latest.value, 1)} ${yieldStat.unit}`,
+    };
+  }
+
+  const technologicalYield = getTechnologicalYield(cropName);
+  if (technologicalYield) {
+    return {
+      tonsPerHa: technologicalYield.tonsPerHa,
+      label: 'Tehnološki donos',
+      detail: `${formatNumber(technologicalYield.tonsPerHa, 1)} t/ha`,
+    };
+  }
+
+  return null;
+}
+
+function getPlantedAmountFactor(plan: CropPlan, plantedAreaHa: number) {
+  if (!plan.plantedAmountKg || plan.plantedAmountKg <= 0 || plantedAreaHa <= 0) return 1;
+
+  const crop = CROPS.find(item => normalizeCropName(item.name) === normalizeCropName(plan.cropName));
+  if (!crop?.seedRateKgPerHa) return 1;
+
+  const [minRate, maxRate] = crop.seedRateKgPerHa;
+  const optimalMinKg = plantedAreaHa * minRate;
+  const optimalMaxKg = plantedAreaHa * maxRate;
+
+  if (plan.plantedAmountKg < optimalMinKg) {
+    return Math.max(0.35, plan.plantedAmountKg / optimalMinKg);
+  }
+
+  if (plan.plantedAmountKg > optimalMaxKg) {
+    const overRatio = (plan.plantedAmountKg - optimalMaxKg) / optimalMaxKg;
+    return Math.max(0.75, 1 - overRatio * 0.35);
+  }
+
+  return 1;
+}
+
+function getExpectedHarvestKg(plan: CropPlan, areaHectares: number | null | undefined, yieldStats: SursYieldStat[]) {
   if (!areaHectares) return null;
-  const crop = CROPS.find(item => item.name.toLowerCase() === plan.cropName.toLowerCase());
-  const tonsPerHa = crop ? parseYieldTonsPerHa(crop.yield) : null;
-  if (tonsPerHa == null) return null;
+  const yieldSource = getYieldSourceForCrop(plan.cropName, yieldStats);
+  if (!yieldSource) return null;
 
   const plantedAreaHa = areaHectares * (plan.areaPercent / 100);
-  return plantedAreaHa * tonsPerHa * 1000;
+  const plantedAmountFactor = getPlantedAmountFactor(plan, plantedAreaHa);
+  return plantedAreaHa * yieldSource.tonsPerHa * 1000 * plantedAmountFactor;
+}
+
+function getPlantedAmountNote(plan: CropPlan, areaHectares: number | null | undefined) {
+  if (!areaHectares) return null;
+  const plantedAreaHa = areaHectares * (plan.areaPercent / 100);
+  const factor = getPlantedAmountFactor(plan, plantedAreaHa);
+  if (factor >= 0.995) return null;
+
+  return `${Math.round(factor * 100)}% zaradi količine`;
+}
+
+function formatSursYieldLabel(cropName: string, yieldStats: SursYieldStat[]) {
+  const yieldSource = getYieldSourceForCrop(cropName, yieldStats);
+  if (!yieldSource) return 'Donos: ni podatka';
+
+  return `${yieldSource.label}: ${yieldSource.detail}`;
 }
 
 function scoreRange(value: number | null, min: number, max: number) {
@@ -306,6 +373,17 @@ function qualityClass(score: number) {
   return styles.compatibilityBad;
 }
 
+function getCropCombinationMessage(cropName: string, plans: CropPlan[]) {
+  const selectedCrop = CROPS.find(crop => crop.name.toLowerCase() === cropName.trim().toLowerCase());
+  if (!selectedCrop) return null;
+
+  const companionNames = getCompanionCropNames(selectedCrop.name);
+  const matchingPlan = plans.find(plan => companionNames.includes(plan.cropName));
+  if (!matchingPlan) return null;
+
+  return `Dobra kombinacija: ${selectedCrop.name} in ${matchingPlan.cropName} se spodbujata med seboj.`;
+}
+
 function ParcelaView() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -316,6 +394,7 @@ function ParcelaView() {
   const [soilError, setSoilError] = useState<string | null>(null);
   const [topCrops, setTopCrops] = useState<TopCropsResponse | null>(null);
   const [topCropsError, setTopCropsError] = useState<string | null>(null);
+  const [yieldStats, setYieldStats] = useState<SursYieldStat[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -538,6 +617,26 @@ function ParcelaView() {
     };
   }, [id, parcela]);
 
+  useEffect(() => {
+    if (!id || !parcela) return;
+
+    let active = true;
+
+    getParcelaYieldStats(id)
+      .then(data => {
+        if (!active) return;
+        setYieldStats(data.stats ?? []);
+      })
+      .catch(() => {
+        if (!active) return;
+        setYieldStats([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [id, parcela]);
+
   const soilCards = [
     { label: t('parcela.soil.ph'), value: formatNumber(soil.ph, 1), sub: t('parcela.soil.ph.optimal'), icon: FlaskConical, score: scoreRange(soil.ph, 6, 7.5) },
     { label: t('parcela.soil.cec'), value: formatNumber(soil.cec, 1), sub: t('parcela.soil.cec.optimal'), icon: FlaskConical, score: scoreRange(soil.cec, 10, 25) },
@@ -550,6 +649,7 @@ function ParcelaView() {
   const totalPlannedPercent = cropPlans.reduce((sum, plan) => sum + Number(plan.areaPercent || 0), 0);
   const remainingPercent = Math.max(0, 100 - totalPlannedPercent);
   const isFullyPlanted = remainingPercent <= 0;
+  const cropCombinationMessage = getCropCombinationMessage(cropNameValue, cropPlans);
 
   async function handleAddCropPlan(e: React.FormEvent) {
     e.preventDefault();
@@ -865,6 +965,9 @@ function ParcelaView() {
             </form>
 
             {cropPlanError && <p className={styles.cropPlanWarning}>{cropPlanError}</p>}
+            {!cropPlanError && cropCombinationMessage && (
+              <p className={styles.cropPlanPositive}>{cropCombinationMessage}</p>
+            )}
 
             <div className={styles.cropPlanList}>
               {cropPlans.length === 0 ? (
@@ -938,7 +1041,7 @@ function ParcelaView() {
                         }}
                       />
                     </div>
-                    <p className={styles.cropMeta}><CalendarDays size={13} /> {crop.season} · {crop.yield}</p>
+                    <p className={styles.cropMeta}><CalendarDays size={13} /> {crop.season} · {formatSursYieldLabel(crop.name, yieldStats)}</p>
                     <p className={styles.cropMeta}>{t('parcela.ai.weatherCriteria')} {crop.weatherScore}%</p>
                   </div>
                 </div>
@@ -1031,6 +1134,9 @@ function ParcelaView() {
             </form>
 
             {cropPlanError && <p className={styles.cropPlanWarning}>{cropPlanError}</p>}
+            {!cropPlanError && cropCombinationMessage && (
+              <p className={styles.cropPlanPositive}>{cropCombinationMessage}</p>
+            )}
 
             <div className={styles.cropPlanList}>
               {cropPlans.length === 0 ? (
@@ -1044,7 +1150,12 @@ function ParcelaView() {
                   </div>
                 </div>
               ) : cropPlans.map(plan => {
-                const expectedHarvestKg = getExpectedHarvestKg(plan, parcela.areaHectares);
+                const yieldSource = getYieldSourceForCrop(plan.cropName, yieldStats);
+                const expectedHarvestKg = getExpectedHarvestKg(plan, parcela.areaHectares, yieldStats);
+                const plantedAmountNote = getPlantedAmountNote(plan, parcela.areaHectares);
+                const estimateLabel = yieldSource
+                  ? `${t('parcela.cropplan.estimate')} ${yieldSource.label}`
+                  : t('parcela.cropplan.estimate');
                 return (
                   <div key={plan.id} className={styles.cropPlanRow}>
                     <div className={styles.cropPlanMain}>
@@ -1074,7 +1185,11 @@ function ParcelaView() {
                     </div>
                     <p className={styles.cropPlanDate}>{t('parcela.cropplan.seeded')}<br /><strong>{formatMassKg(plan.plantedAmountKg)}</strong></p>
                     <p className={styles.cropPlanDate}>{t('parcela.cropplan.harvest')}<br /><strong>{formatDate(plan.harvestDate)}</strong></p>
-                    <p className={styles.cropPlanDate}>{t('parcela.cropplan.estimate')}<br /><strong>{formatMassKg(expectedHarvestKg)}</strong></p>
+                    <p className={styles.cropPlanDate}>
+                      {estimateLabel}<br />
+                      <strong>{formatMassKg(expectedHarvestKg)}</strong>
+                      {plantedAmountNote && <><br /><span>{plantedAmountNote}</span></>}
+                    </p>
                     <button className={styles.cropPlanDeleteBtn} title={t('parcela.cropplan.delete')} onClick={() => handleDeleteCropPlan(plan.id)}>
                       <Trash2 size={15} />
                     </button>

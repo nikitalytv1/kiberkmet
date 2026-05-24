@@ -12,6 +12,7 @@ export interface RegionParcela {
   id: string;
   name: string;
   color: string | null;
+  userId?: string | null;
   gerk_pid?: string | null;
   typeOfUse?: string | number | null;
   areaHectares?: number | null;
@@ -62,15 +63,17 @@ export function prefetchStatisticalRegions() {
 
 export async function getRegionParcele(regionCode: string): Promise<RegionParceleResponse> {
   const normalizedRegionCode = regionCode.padStart(2, '0');
-  const cached = regionParceleCache.get(normalizedRegionCode);
+  const token = localStorage.getItem('accessToken') ?? '';
+  const cacheKey = `${normalizedRegionCode}:${token}`;
+  const cached = regionParceleCache.get(cacheKey);
   if (cached) return cached;
 
   const request = fetchRegionParcele(normalizedRegionCode).catch(err => {
-    regionParceleCache.delete(normalizedRegionCode);
+    regionParceleCache.delete(cacheKey);
     throw err;
   });
 
-  regionParceleCache.set(normalizedRegionCode, request);
+  regionParceleCache.set(cacheKey, request);
   return request;
 }
 
