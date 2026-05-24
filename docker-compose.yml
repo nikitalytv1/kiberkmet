@@ -46,14 +46,11 @@ services:
 
   frontend:
     image: dogexen/kiberkmet:frontend-latest
+    command: npm run preview -- --host 0.0.0.0 --port 80
     ports:
       - "80:80"
     depends_on:
       - backend
-    deploy:
-      resources:
-        limits:
-          memory: 64M
 
 volumes:
   db_data:
