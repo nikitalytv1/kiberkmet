@@ -1,11 +1,21 @@
 package parser
 
 import com.fasterxml.jackson.core.JsonFactory
+import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.ObjectMapper
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+
+private data class GerkFeatureCache(
+    val path: String,
+    val lastModified: Long,
+    val length: Long,
+    val features: List<FeatureItem>
+)
+
+private var gerkFeatureCache: GerkFeatureCache? = null
 
 
 fun mapRaba(rabaId: Int): String {
@@ -51,12 +61,47 @@ fun download(fileID: String, outputFile: File) {
     if (connection.responseCode != 200) {
         error("Download neuspešen: ${connection.responseCode}")
     }
+    outputFile.parentFile?.mkdirs()
+
     //buffer output za json datoteko
     connection.inputStream.use { input ->
         outputFile.outputStream().use { output ->
             input.copyTo(output, bufferSize = 8 * 1024)
         }
     }
+}
+
+fun loadGerkFeatures(localFile: File, fileID: String = "1b8csxaBYCpevGbgONtekxM_xTo4vGety"): List<FeatureItem> {
+    if (!localFile.exists() || localFile.length() == 0L) {
+        download(fileID, localFile)
+    }
+
+    val cachePath = localFile.absoluteFile.normalize().path
+    gerkFeatureCache?.let { cache ->
+        if (cache.path == cachePath && cache.lastModified == localFile.lastModified() && cache.length == localFile.length()) {
+            return cache.features
+        }
+    }
+
+    val features = try {
+        parseGerkFile(localFile)
+    } catch (error: JsonParseException) {
+        val tmpFile = File(localFile.parentFile ?: File("."), "${localFile.name}.tmp")
+        if (tmpFile.exists()) tmpFile.delete()
+
+        download(fileID, tmpFile)
+
+        if (localFile.exists()) localFile.delete()
+        if (!tmpFile.renameTo(localFile)) {
+            tmpFile.copyTo(localFile, overwrite = true)
+            tmpFile.delete()
+        }
+
+        parseGerkFile(localFile)
+    }
+
+    gerkFeatureCache = GerkFeatureCache(cachePath, localFile.lastModified(), localFile.length(), features)
+    return features
 }
 
 fun extractCoordinates(geometry: Map<String, Any>): List<List<Double>> {
@@ -87,11 +132,154 @@ fun extractCoordinates(geometry: Map<String, Any>): List<List<Double>> {
     }
 }
 
+private fun readPointCoordinates(parser: com.fasterxml.jackson.core.JsonParser): List<Double> {
+    val point = mutableListOf<Double>()
+    if (parser.currentToken != JsonToken.START_ARRAY) {
+        parser.skipChildren()
+        return point
+    }
+
+    while (parser.nextToken() != JsonToken.END_ARRAY) {
+        if (parser.currentToken?.isNumeric == true) {
+            point.add(parser.doubleValue)
+        } else {
+            parser.skipChildren()
+        }
+    }
+    return point
+}
+
+private fun readLinearRing(parser: com.fasterxml.jackson.core.JsonParser): List<List<Double>> {
+    val ring = mutableListOf<List<Double>>()
+    if (parser.currentToken != JsonToken.START_ARRAY) {
+        parser.skipChildren()
+        return ring
+    }
+
+    while (parser.nextToken() != JsonToken.END_ARRAY) {
+        if (parser.currentToken == JsonToken.START_ARRAY) {
+            val point = readPointCoordinates(parser)
+            if (point.size >= 2) ring.add(point)
+        } else {
+            parser.skipChildren()
+        }
+    }
+    return ring
+}
+
+private fun readCoordinates(parser: com.fasterxml.jackson.core.JsonParser, geometryType: String?): List<List<Double>> {
+    if (parser.currentToken != JsonToken.START_ARRAY) {
+        parser.skipChildren()
+        return emptyList()
+    }
+
+    return when (geometryType) {
+        "Point" -> {
+            val point = readPointCoordinates(parser)
+            if (point.size >= 2) listOf(point) else emptyList()
+        }
+        "Polygon" -> {
+            if (parser.nextToken() == JsonToken.START_ARRAY) {
+                val outer = readLinearRing(parser)
+                while (parser.nextToken() != JsonToken.END_ARRAY) {
+                    parser.skipChildren()
+                }
+                outer
+            } else {
+                parser.skipChildren()
+                emptyList()
+            }
+        }
+        "MultiPolygon" -> {
+            if (parser.nextToken() == JsonToken.START_ARRAY && parser.nextToken() == JsonToken.START_ARRAY) {
+                val outer = readLinearRing(parser)
+                while (parser.nextToken() != JsonToken.END_ARRAY) {
+                    parser.skipChildren()
+                }
+                while (parser.nextToken() != JsonToken.END_ARRAY) {
+                    parser.skipChildren()
+                }
+                outer
+            } else {
+                parser.skipChildren()
+                emptyList()
+            }
+        }
+        else -> {
+            parser.skipChildren()
+            emptyList()
+        }
+    }
+}
+
+private fun readGeometryCoordinates(parser: com.fasterxml.jackson.core.JsonParser): List<List<Double>> {
+    var geometryType: String? = null
+    var coordinates = emptyList<List<Double>>()
+
+    if (parser.currentToken != JsonToken.START_OBJECT) {
+        parser.skipChildren()
+        return coordinates
+    }
+
+    while (parser.nextToken() != JsonToken.END_OBJECT) {
+        val fieldName = parser.currentName
+        parser.nextToken()
+        when (fieldName) {
+            "type" -> geometryType = parser.valueAsString
+            "coordinates" -> coordinates = readCoordinates(parser, geometryType)
+            else -> parser.skipChildren()
+        }
+    }
+
+    return coordinates
+}
+
 data class FeatureItem(
     val gerkPID: Long,
-    val typeOfUse: String,
+    val rabaId: Int,
     val coordinates: List<List<Double>>
-)
+) {
+    val typeOfUse: String get() = mapRaba(rabaId)
+}
+
+fun parseGerkFile(localFile: File): List<FeatureItem> {
+    val factory = JsonFactory()
+    val parser = factory.createParser(localFile)
+    val features = mutableListOf<FeatureItem>()
+    while (parser.nextToken() != null) {
+        if (parser.currentName == "features") { parser.nextToken(); break }
+    }
+    while (parser.nextToken() != JsonToken.END_ARRAY) {
+        var gerkPID: Long? = null
+        var rabaID: Int? = null
+        var coordinates: List<List<Double>>? = null
+        while (parser.nextToken() != JsonToken.END_OBJECT) {
+            val fieldName = parser.currentName
+            if (fieldName == "properties") {
+                parser.nextToken()
+                while (parser.nextToken() != JsonToken.END_OBJECT) {
+                    val propName = parser.currentName
+                    parser.nextToken()
+                    when (propName) {
+                        "GERK_PID" -> gerkPID = parser.longValue
+                        "RABA_ID"  -> rabaID  = parser.intValue
+                        else       -> parser.skipChildren()
+                    }
+                }
+            } else if (fieldName == "geometry") {
+                parser.nextToken()
+                coordinates = readGeometryCoordinates(parser)
+            } else {
+                parser.nextToken()
+                parser.skipChildren()
+            }
+        }
+        if (gerkPID != null && rabaID != null && coordinates != null) {
+            features.add(FeatureItem(gerkPID, rabaID, coordinates))
+        }
+    }
+    return features
+}
 
 fun main() {
     val localFile = File("field.json")
@@ -139,7 +327,7 @@ fun main() {
             features.add(
                 FeatureItem(
                     gerkPID = gerkPID,
-                    typeOfUse = mapRaba(rabaID),
+                    rabaId = rabaID,
                     coordinates = extractCoordinates(geometry)
                 )
             )
