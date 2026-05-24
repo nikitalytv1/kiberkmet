@@ -18,12 +18,12 @@ class Lexer(fileName: String) {
     private val finite = arrayOfNulls<Final>(maxState + 1)
 
     init {
-        finite[1]  = Final.KEYWORD
-        finite[3]  = Final.STRING
-        finite[5]  = Final.NUMBER
-        finite[7]  = Final.NUMBER
-        finite[8]  = Final.WHITESPACE
-        finite[9]  = Final.LEFT_BRACE
+        finite[1] = Final.KEYWORD
+        finite[3] = Final.STRING
+        finite[5] = Final.NUMBER
+        finite[7] = Final.NUMBER
+        finite[8] = Final.WHITESPACE
+        finite[9] = Final.LEFT_BRACE
         finite[10] = Final.RIGHT_BRACE
         finite[11] = Final.RIGHT_PAREN
         finite[12] = Final.COMMA
@@ -31,15 +31,15 @@ class Lexer(fileName: String) {
         finite[23] = Final.POINT
 
         for (c in 'a'..'z') table[0][c.code] = 1
-        table[0]['"'.code]  = 2
-        table[0]['-'.code]  = 4
+        table[0]['"'.code] = 2
+        table[0]['-'.code] = 4
         for (c in '0'..'9') table[0][c.code] = 5
         for (c in " \t\n\r") table[0][c.code] = 8
-        table[0]['{'.code]  = 9
-        table[0]['}'.code]  = 10
-        table[0][')'.code]  = 11
-        table[0][','.code]  = 12
-        table[0]['('.code]  = 13
+        table[0]['{'.code] = 9
+        table[0]['}'.code] = 10
+        table[0][')'.code] = 11
+        table[0][','.code] = 12
+        table[0]['('.code] = 13
 
         for (c in 'a'..'z') table[1][c.code] = 1
 
@@ -94,38 +94,41 @@ class Lexer(fileName: String) {
 
     private fun advance() {
         val ch = scanner.getCurrentChar() ?: return
-        if (ch == '\n') { line++; col = 1 } else col++
+        if (ch == '\n') {
+            line++; col = 1
+        } else col++
         scanner.nextChar()
     }
 
     private fun buildToken(final: Final, lexem: String, pos: Position): Token = when (final) {
         Final.KEYWORD -> {
             val type = when (lexem) {
-                "city"     -> TokenType.CITY
-                "road"     -> TokenType.ROAD
+                "city" -> TokenType.CITY
+                "road" -> TokenType.ROAD
                 "building" -> TokenType.BUILDING
-                "field"    -> TokenType.FIELD
-                "zone"     -> TokenType.ZONE
-                "river"    -> TokenType.RIVER
-                "sensor"   -> TokenType.SENSOR
-                "crop"     -> TokenType.CROP
-                "line"     -> TokenType.LINE
-                "box"      -> TokenType.BOX
-                "bend"     -> TokenType.BEND
-                "set"      -> TokenType.SET
-                else       -> throw LexerException("Unknown keyword '$lexem'", pos)
+                "field" -> TokenType.FIELD
+                "zone" -> TokenType.ZONE
+                "river" -> TokenType.RIVER
+                "sensor" -> TokenType.SENSOR
+                "crop" -> TokenType.CROP
+                "line" -> TokenType.LINE
+                "box" -> TokenType.BOX
+                "bend" -> TokenType.BEND
+                "set" -> TokenType.SET
+                else -> throw LexerException("Unknown keyword '$lexem'", pos)
             }
             Token(type, lexem, pos)
         }
-        Final.STRING      -> Token(TokenType.STRING, lexem.drop(1).dropLast(1), pos)
-        Final.NUMBER      -> Token(TokenType.NUMBER, lexem, pos)
-        Final.LEFT_BRACE  -> Token(TokenType.LEFT_BRACE, lexem, pos)
+
+        Final.STRING -> Token(TokenType.STRING, lexem.drop(1).dropLast(1), pos)
+        Final.NUMBER -> Token(TokenType.NUMBER, lexem, pos)
+        Final.LEFT_BRACE -> Token(TokenType.LEFT_BRACE, lexem, pos)
         Final.RIGHT_BRACE -> Token(TokenType.RIGHT_BRACE, lexem, pos)
-        Final.LEFT_PAREN  -> Token(TokenType.LEFT_PAREN, lexem, pos)
+        Final.LEFT_PAREN -> Token(TokenType.LEFT_PAREN, lexem, pos)
         Final.RIGHT_PAREN -> Token(TokenType.RIGHT_PAREN, lexem, pos)
-        Final.COMMA       -> Token(TokenType.COMMA, lexem, pos)
-        Final.POINT       -> Token(TokenType.POINT, lexem.drop(1).dropLast(1), pos)
-        Final.WHITESPACE  -> nextToken()
+        Final.COMMA -> Token(TokenType.COMMA, lexem, pos)
+        Final.POINT -> Token(TokenType.POINT, lexem.drop(1).dropLast(1), pos)
+        Final.WHITESPACE -> nextToken()
     }
 
     fun nextToken(): Token {
@@ -137,15 +140,15 @@ class Lexer(fileName: String) {
         var lexem = ""
         var state = 0
         val startLine = line
-        val startCol  = col
+        val startCol = col
 
         while (true) {
-            val ch   = scanner.getCurrentChar()
+            val ch = scanner.getCurrentChar()
             val next = nextState(state, ch)
 
             if (next != -1) {
                 lexem += ch!!
-                state  = next
+                state = next
                 advance()
             } else {
                 val final = finite[state]
