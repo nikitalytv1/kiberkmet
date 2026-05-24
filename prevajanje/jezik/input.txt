@@ -1,48 +1,11 @@
-city "Dva domova z cesto" {
-  building "Levi dom" {
-    box((46.5540,15.6450),(46.5543,15.6454))
-    set("tip","stanovanjska")
+city "Ljubljana" {
+  field "Njiva" {
+    box((46.5540,15.6450),(46.5544,15.6456))
   }
 
-  building "Spodnji dom" {
-    box((46.5536,15.6450),(46.5539,15.6454))
-    set("tip","stanovanjska")
+  road "Cesta" {
+    line((46.5538,15.6452),(46.5548,15.6452)
   }
 
-  building "Desni dom" {
-    box((46.5540,15.6458),(46.5543,15.6462))
-    set("tip","stanovanjska")
-  }
-
-  road "Glavna ulica" {
-    line((46.5534,15.6456),(46.5540,15.6456))
-    line((46.5540,15.6456),(46.5547,15.6456))
-    set("podlaga","asfalt")
-  }
-
-  road "Stranska pot" {
-    line((46.5540,15.6456),(46.5539,15.6458))
-    bend((46.5539,15.6458),(46.5537,15.6465),30)
-    line((46.5537,15.6465),(46.5535,15.6470))
-    set("podlaga","makadam")
-  }
-
-  river "Potok" {
-    line((46.5536,15.6438),(46.5539,15.6441))
-    bend((46.5539,15.6441),(46.5542,15.6444),20)
-    line((46.5542,15.6444),(46.5546,15.6447))
-    set("pretok","nizek")
-  }
-
-  field "Travnik" {
-    box((46.5544,15.6450),(46.5548,15.6462))
-    set("tip rabe","travnik")
-  }
-
-  sensor "Senzor vlage" (46.5546,15.6456) {
-    set("vlaznost",68)
-    set("temperatura",14)
-  }
-
-  crop "Koruza" (46.5545,15.6455)
+  crop "Koruza" (46.5542,15.6453)
 }

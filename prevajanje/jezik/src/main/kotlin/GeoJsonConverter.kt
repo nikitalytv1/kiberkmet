@@ -3,13 +3,15 @@ package org.example
 import java.io.File
 import kotlin.math.*
 
-class GeoJsonConverter {
+class GeoJsonConverter(
+    private val outputFile: File = File("output.geojson")
+) {
 
     companion object {
-        private const val LAT_M  = 111_000.0  // метров на градус широты
-        private const val LON_M  =  76_300.0  // метров на градус долготы (~46.5°N)
-        private const val ROAD_HALF_W  = 3.0  // полуширина дороги в метрах
-        private const val RIVER_HALF_W = 3.0  // полуширина реки в метрах
+        private const val LAT_M  = 111_000.0  // metrov na stopinjo zemljepisne širine
+        private const val LON_M  =  76_300.0  // metrov na stopinjo zemljepisne dolžine (~46.5°N)
+        private const val ROAD_HALF_W  = 3.0  // polovična širina ceste v metrih
+        private const val RIVER_HALF_W = 3.0  // polovična širina reke v metrih
     }
 
     fun convert(program: ProgramNode): String {
@@ -28,11 +30,11 @@ class GeoJsonConverter {
             appendLine("  ]")
             append("}")
         }
-        File("output.geojson").writeText(result)
+        outputFile.writeText(result)
         return result
     }
 
-    // ── Dispatch ──────────────────────────────────────────────────────────────
+    // ── Usmerjanje ────────────────────────────────────────────────────────────
 
     private fun elementToFeatures(element: CityElementNode, cityName: String): List<String> = when (element) {
         is RoadNode     -> bufferedLinear(element.name, "road",     cityName, element.commands, ROAD_HALF_W)
@@ -44,7 +46,7 @@ class GeoJsonConverter {
         is CropNode     -> listOf(cropFeature(element, cityName))
     }
 
-    // ── Дороги / реки → буферный Polygon (масштабируется с зумом) ────────────
+    // ── Ceste / reke → vmesni Polygon, ki se prilagaja povečavi ───────────────
 
     private fun bufferedLinear(
         name: String, type: String, cityName: String,
@@ -57,7 +59,7 @@ class GeoJsonConverter {
         return listOf(feature("Polygon", bufferPolygon(pts, halfWidthMeters), props))
     }
 
-    /** Все точки центральной линии из line/bend команд в порядке (lon, lat). */
+    /** Vse točke središčne črte iz ukazov line/bend v pravilnem vrstnem redu (lon, lat). */
     private fun collectCenterline(commands: List<CommandNode>): List<Pair<Double, Double>> {
         val pts = mutableListOf<Pair<Double, Double>>()
         fun add(lon: Double, lat: Double) {
@@ -79,9 +81,9 @@ class GeoJsonConverter {
     }
 
     /**
-     * Строит замкнутый Polygon из центральной линии:
-     * левый край → правый край (в обратном порядке) → замыкание.
-     * Ширина задана в метрах и не зависит от зума карты.
+     * Zgradi zaprt Polygon iz središčne črte:
+     * levi rob → desni rob v obratnem vrstnem redu → zapiranje.
+     * Širina je podana v metrih in ni odvisna od povečave zemljevida.
      */
     private fun bufferPolygon(pts: List<Pair<Double, Double>>, halfW: Double): String {
         val left  = ArrayList<Pair<Double, Double>>(pts.size)
@@ -110,11 +112,11 @@ class GeoJsonConverter {
         return "[[$ring]]"
     }
 
-    /** Направление в метрическом пространстве (lon=X, lat=Y). */
+    /** Smer v metričnem prostoru (lon=X, lat=Y). */
     private fun geoAngle(a: Pair<Double, Double>, b: Pair<Double, Double>): Double =
         atan2((b.second - a.second) * LAT_M, (b.first - a.first) * LON_M)
 
-    // ── Здания / поля / зоны ──────────────────────────────────────────────────
+    // ── Stavbe / polja / cone ─────────────────────────────────────────────────
 
     private fun areaFeatures(
         name: String, type: String, cityName: String, commands: List<CommandNode>
@@ -140,7 +142,7 @@ class GeoJsonConverter {
         return features
     }
 
-    // ── Точечные элементы ─────────────────────────────────────────────────────
+    // ── Točkovni elementi ─────────────────────────────────────────────────────
 
     private fun sensorFeature(node: SensorNode, cityName: String): String {
         val meta  = node.metadata.associate { it.key to it.value }
@@ -153,7 +155,7 @@ class GeoJsonConverter {
         return feature("Point", "[${coord(node.location)}]", props)
     }
 
-    // ── GeoJSON builders ──────────────────────────────────────────────────────
+    // ── Gradniki GeoJSON ──────────────────────────────────────────────────────
 
     private fun feature(geometryType: String, coordinates: String, props: String) = buildString {
         appendLine("    {")

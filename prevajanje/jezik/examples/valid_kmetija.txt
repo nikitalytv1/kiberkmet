@@ -1,0 +1,34 @@
+city "Ucna kmetija" {
+  building "Hisa" {
+    box((46.5540,15.6450),(46.5543,15.6454))
+    set("namembnost","stanovanjska")
+  }
+
+  road "Dovoz" {
+    line((46.5536,15.6448),(46.5546,15.6448))
+    set("podlaga","asfalt")
+  }
+
+  river "Potok" {
+    bend((46.5535,15.6465),(46.5547,15.6468),25)
+    set("pretok","nizek")
+  }
+
+  field "Njiva" {
+    box((46.5544,15.6450),(46.5549,15.6460))
+    set("kultura","koruza")
+  }
+
+  zone "Sadovnjak" {
+    box((46.5537,15.6452),(46.5539,15.6460))
+    set("vrsta","jablane")
+  }
+
+  sensor "Vlaga njive" (46.5546,15.6454) {
+    set("vlaznost",62)
+    set("temperatura",18)
+  }
+
+  crop "Koruza" (46.5547,15.6455)
+  crop "Jablana" (46.5538,15.6456)
+}
