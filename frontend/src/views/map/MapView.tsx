@@ -13,6 +13,7 @@ import { NamePolygonModal }     from './components/NamePolygonModal';
 import { DeleteConfirmModal }   from './components/DeleteConfirmModal';
 import { ParcelsSidebar }       from './components/ParcelsSidebar';
 import { MapFlyTo }             from './components/MapFlyTo';
+import { CropGrowthIndicator }  from './components/CropGrowthIndicator';
 
 const MAP_POSITION_KEY = 'map_position';
 
@@ -259,6 +260,7 @@ function MapView() {
               : [];
           const occupiedPercent = Math.max(0, Math.min(100, cropPlans.reduce((sum, plan) => sum + (Number(plan.areaPercent) || 0), 0)));
           const occupiedFill = selected && occupiedPercent > 0 ? 0.18 + (occupiedPercent / 100) * 0.32 : 0.15;
+
           return (
             <Polygon
               key={i}
@@ -280,6 +282,12 @@ function MapView() {
             >
               <Tooltip permanent direction="center" className="polygon-label">
                 <div className={styles.polygonTooltip}>
+                  {selected && cropPlans.length > 0 && (
+                    <CropGrowthIndicator
+                      plantingDate={cropPlans[0].plantingDate}
+                      harvestDate={cropPlans[0].harvestDate}
+                    />
+                  )}
                   <span>{pg.name}</span>
                   {selected && cropPlans.map(plan => (
                     <span key={plan.id}>{plan.cropName} {Number(plan.areaPercent).toFixed(0)}%</span>

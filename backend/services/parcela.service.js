@@ -98,8 +98,16 @@ function getTodayDate() {
 
 function estimateHarvestDate(cropName, plantingDate) {
   if (!plantingDate) return null;
-  const days = CROP_GROWING_DAYS[cropName] ?? 100;
   const harvest = new Date(plantingDate);
+
+  // Special case for bukev: 2 minutes growth from NOW
+  if (cropName.toLowerCase().includes('bukev')) {
+    const now = new Date();
+    harvest.setTime(now.getTime() + 2 * 60 * 1000); // 2 minutes from now
+    return harvest;
+  }
+
+  const days = CROP_GROWING_DAYS[cropName] ?? 100;
   harvest.setDate(harvest.getDate() + days);
   return harvest;
 }
@@ -558,7 +566,15 @@ export async function createCropPlan(parcelaId, userId, body) {
   const cropName = normalizePlannedCropName(body.cropName);
   const areaPercent = normalizeCropPlanPercent(body.areaPercent);
   const plantedAmountKg = normalizeOptionalPositiveNumber(body.plantedAmountKg, "plantedAmountKg");
-  const plantingDate = normalizeDate(body.plantingDate, "plantingDate") ?? getTodayDate();
+
+  // Special case for bukev: plantingDate is NOW
+  let plantingDate = normalizeDate(body.plantingDate, "plantingDate");
+  if (cropName.toLowerCase().includes('bukev')) {
+    plantingDate = new Date();
+  } else {
+    plantingDate = plantingDate ?? getTodayDate();
+  }
+
   const harvestDate = normalizeDate(body.harvestDate, "harvestDate") ?? estimateHarvestDate(cropName, plantingDate);
 
   if (!cropName || areaPercent == null) {
