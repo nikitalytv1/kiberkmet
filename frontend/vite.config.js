@@ -15,6 +15,10 @@ export default defineConfig({
         target: 'http://backend:5000',
         changeOrigin: true,
       },
+      '/ws': {
+        target: 'ws://backend:5000',
+        ws: true,
+      },
     },
   },
 })

@@ -14,6 +14,7 @@ import {
 } from 'chart.js';
 import { Bar, Pie } from 'react-chartjs-2';
 import { analyzeParcela, createCropPlan, deleteCropPlan, getParcela, updateCropPlan, updateParcela, ParcelaAnalysis, CropPlan } from '../../api/parcele';
+import { openRealtimeSocket, parseRealtimeMessage } from '../../api/realtime';
 import { getParcelaYieldStats, getRegionalTopCrops, SursYieldStat, TopCropsResponse } from '../../api/statistics';
 import { Point } from '../map/types';
 import { CROPS, getCompanionCropNames, getTechnologicalYield } from '../../data/crops';
@@ -574,6 +575,38 @@ function ParcelaView() {
       active = false;
     };
   }, [id, center, parcela]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const ws = openRealtimeSocket();
+    if (!ws) return;
+
+    ws.onmessage = event => {
+      const message = parseRealtimeMessage(event.data);
+      if (!message || message.type === 'connected') return;
+      if (message.parcelaId !== id) return;
+
+      if (message.type === 'analysis:completed') {
+        setAnalysis(message.analysis);
+        setSoilLoading(false);
+        setSoilError(null);
+
+        if (!hasSoilData(getSoilValuesFromAnalysis(message.analysis))) {
+          setSoilError('SoilGrids za to parcelo ni vrnil meritev. Poskusi parcelo nekoliko premakniti ali poveÄŤati.');
+        }
+      }
+
+      if (message.type === 'analysis:failed') {
+        setSoilLoading(false);
+        setSoilError(message.error);
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [id]);
 
   useEffect(() => {
     if (!center) return;

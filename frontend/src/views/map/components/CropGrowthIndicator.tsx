@@ -8,19 +8,19 @@ interface CropGrowthIndicatorProps {
 }
 
 const WHEAT_STAGES = [
-  '🌱', // 0-20%: Seme v zemlji
-  '🌿', // 20-40%: Kalitev
-  '🪴', // 40-60%: Mlada rastlina
-  '🌾', // 60-80%: Rast
-  '🌽', // 80-100%: Zrela
+  '🌱',
+  '🌿',
+  '🪴',
+  '🌾', 
+  '🌽', 
 ];
 
 const STAGE_COLORS = [
-  '#90EE90', // 0-20%
-  '#32CD32', // 20-40%
-  '#228B22', // 40-60%
-  '#556B2F', // 60-80%
-  '#FFA500', // 80-100%
+  '#90EE90',
+  '#32CD32',
+  '#228B22',
+  '#556B2F',
+  '#FFA500', 
 ];
 
 export function CropGrowthIndicator({ plantingDate, harvestDate, className }: CropGrowthIndicatorProps) {

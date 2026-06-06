@@ -1,6 +1,7 @@
 import { prisma } from "../index.js";
 import { fetchSoilAnalysis } from "./soil.service.js";
 import { createError } from "../utils/errors.js";
+import { notifyUser } from "../websocket.js";
 
 export const LAND_USE_TYPES = [
   "Njiva",
@@ -354,9 +355,28 @@ async function runParcelaAnalysis(id, userId) {
     `;
 
     return analysis[0];
-  })().finally(() => {
-    analysisJobs.delete(jobKey);
-  });
+  })();
+
+  job
+    .then((analysis) => {
+      console.log(`[analysis] Completed soil analysis for parcela ${id}`);
+      notifyUser(userId, {
+        type: "analysis:completed",
+        parcelaId: id,
+        analysis,
+      });
+    })
+    .catch((err) => {
+      console.log(`[analysis] Failed soil analysis for parcela ${id}: ${err.message}`);
+      notifyUser(userId, {
+        type: "analysis:failed",
+        parcelaId: id,
+        error: err.message || "Analiza tal ni uspela.",
+      });
+    })
+    .finally(() => {
+      analysisJobs.delete(jobKey);
+    });
 
   analysisJobs.set(jobKey, job);
   return job;
