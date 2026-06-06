@@ -1,5 +1,6 @@
 #NODE_MODULES
 node_modules/
+.npm-cache/
 
 # Env
 .env
