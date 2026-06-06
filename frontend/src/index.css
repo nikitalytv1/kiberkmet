@@ -65,3 +65,13 @@
 body {
   margin: 0;
 }
+
+@page {
+  margin: 0;
+}
+
+@media print {
+  body {
+    padding: 1.5cm;
+  }
+}

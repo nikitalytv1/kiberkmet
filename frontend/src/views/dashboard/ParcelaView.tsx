@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Bot, CalendarDays, Droplets, FlaskConical, Leaf, Pencil, Plus, Sprout, Trash2 } from 'lucide-react';
+import { ArrowLeft, Bot, CalendarDays, Droplets, FlaskConical, Leaf, Pencil, Plus, Printer, Sprout, Trash2 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { MapContainer, TileLayer, Polygon } from 'react-leaflet';
 import { Link, useParams, useNavigate } from 'react-router-dom';
@@ -410,6 +410,7 @@ function ParcelaView() {
   const [plantedAmountUnit, setPlantedAmountUnit] = useState<'kg' | 't'>('kg');
   const [plantingDateValue, setPlantingDateValue] = useState(todayInputDate);
   const [savingCropPlan, setSavingCropPlan] = useState(false);
+  const [showAllCrops, setShowAllCrops] = useState(false);
 
   const center = useMemo(() => (parcela ? getCenter(parcela.pts) : null), [parcela]);
   const soil = useMemo(() => getSoilValuesFromAnalysis(analysis), [analysis]);
@@ -764,6 +765,7 @@ function ParcelaView() {
         <Link to="/dashboard" className={styles.backLink}><ArrowLeft size={16} /> {t('parcela.back')}</Link>
         <div className={styles.detailHeaderDivider} />
         <div style={{ flex: 1, minWidth: 0 }}>
+
           <p className={styles.detailEyebrow}>{t('parcela.eyebrow')}</p>
           <div className={styles.detailTitleRow}>
             {editingName ? (
@@ -819,6 +821,9 @@ function ParcelaView() {
             {analysis && ` · ${analysis.lat.toFixed(5)}, ${analysis.lon.toFixed(5)}`}
           </p>
         </div>
+        <button className={styles.printBtn} onClick={() => window.print()}>
+          <Printer size={14} /> Natisni
+        </button>
       </div>
 
       <div className={styles.detailLayout}>
@@ -1023,7 +1028,7 @@ function ParcelaView() {
             <div className={styles.compatibilityList}>
               {analysisPending ? (
                 <p className={styles.panelNotice}>{t('parcela.ai.pending')}</p>
-              ) : cropScores.map((crop, idx) => (
+              ) : cropScores.slice(0, 5).map((crop, idx) => (
                 <div key={crop.name} className={styles.compatibilityRow} style={{ animationDelay: `${idx * 70}ms` }}>
                   <div className={styles.cropIcon}>{crop.icon}</div>
                   <div className={styles.compatibilityBody}>
@@ -1047,7 +1052,48 @@ function ParcelaView() {
                 </div>
               ))}
             </div>
+            {!analysisPending && cropScores.length > 5 && (
+              <button className={styles.showAllBtn} onClick={() => setShowAllCrops(true)}>
+                Prikaži vse ({cropScores.length - 5} več)
+              </button>
+            )}
           </section>
+
+          {showAllCrops && (
+            <div className={styles.cropsModalOverlay} onClick={() => setShowAllCrops(false)}>
+              <div className={styles.cropsModal} onClick={e => e.stopPropagation()}>
+                <div className={styles.cropsModalHeader}>
+                  <p className={styles.cropsModalTitle}><Bot size={16} /> {t('parcela.ai.title')}</p>
+                  <button className={styles.cropsModalClose} onClick={() => setShowAllCrops(false)}>✕</button>
+                </div>
+                <div className={styles.cropsModalList}>
+                  {cropScores.map((crop, idx) => (
+                    <div key={crop.name} className={styles.compatibilityRow} style={{ animationDelay: `${idx * 40}ms` }}>
+                      <div className={styles.cropIcon}>{crop.icon}</div>
+                      <div className={styles.compatibilityBody}>
+                        <div className={styles.compatibilityTop}>
+                          <p className={styles.cropName}>{crop.name}</p>
+                          <span className={`${styles.compatibilityBadge} ${qualityClass(crop.score)}`}>{crop.score}%</span>
+                        </div>
+                        <div className={styles.compatibilityTrack}>
+                          <div
+                            className={`${styles.compatibilityFill} ${qualityClass(crop.score)}`}
+                            style={{
+                              width: `${crop.score}%`,
+                              ['--fill-width' as string]: `${crop.score}%`,
+                              animationDelay: `${idx * 40 + 100}ms`,
+                            }}
+                          />
+                        </div>
+                        <p className={styles.cropMeta}><CalendarDays size={13} /> {crop.season} · {formatSursYieldLabel(crop.name, yieldStats)}</p>
+                        <p className={styles.cropMeta}>{t('parcela.ai.weatherCriteria')} {crop.weatherScore}%</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           <section className={styles.cropPlanPanel} style={{ marginTop: 24 }}>
             <div className={styles.cropPlanHeader}>

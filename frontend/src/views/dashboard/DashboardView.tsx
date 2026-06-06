@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Download } from 'lucide-react';
 import styles from './dashboard.module.css';
 import { ParcelaCard, ParcelaItem } from './ParcelaCard';
 import { getParcele, ParcelaAnalysis } from '../../api/parcele';
@@ -7,6 +8,7 @@ import { COLORS } from '../map/types';
 import ParcelaBarChart, { BarItem } from './ParcelaBarChart';
 import RabaDonutChart, { DonutSlice } from './RabaDonutChart';
 import { useLanguage } from '../../context/LanguageContext';
+import { downloadGeoJSON } from '../../utils/export';
 
 type SoilLayer = {
   name: string;
@@ -103,6 +105,7 @@ function DashboardView() {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [parcele, setParcele] = useState<ParcelaItem[]>([]);
+  const [rawParcele, setRawParcele] = useState<Awaited<ReturnType<typeof getParcele>>>([]);
   const [barItems, setBarItems] = useState<BarItem[]>([]);
   const [donutSlices, setDonutSlices] = useState<DonutSlice[]>([]);
   const [areaValues, setAreaValues] = useState<number[]>([]);
@@ -110,6 +113,7 @@ function DashboardView() {
   useEffect(() => {
     getParcele()
       .then(data => {
+        setRawParcele(data);
         setAreaValues(data.map(p => p.areaHectares).filter((value): value is number => value != null));
         const rabaMap = new Map<string, number>();
         data.forEach(p => {
@@ -190,7 +194,14 @@ function DashboardView() {
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>{t('dashboard.title')}</h1>
+      <div className={styles.pageHeader}>
+        <h1 className={styles.title}>{t('dashboard.title')}</h1>
+        {parcele.length > 0 && (
+          <button className={styles.exportBtn} onClick={() => downloadGeoJSON(rawParcele)}>
+            <Download size={14} /> GeoJSON
+          </button>
+        )}
+      </div>
 
       <div className={styles.statsGrid}>
         {stats.map(({ label, value, sub }) => (
@@ -202,24 +213,28 @@ function DashboardView() {
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: 16 }}>
-        {donutSlices.length > 0 && (
-          <div className={styles.statCard} style={{ padding: '20px 22px', flex: 1, minWidth: 0 }}>
-            <p className={styles.statLabel} style={{ marginBottom: 14 }}>{t('dashboard.chart.landUse')}</p>
-            <RabaDonutChart slices={donutSlices} />
-          </div>
-        )}
+      {(donutSlices.length > 0 || barItems.length > 1) && (
+        <div style={{ display: 'flex', gap: 16 }}>
+          {donutSlices.length > 0 && (
+            <div
+              className={styles.statCard}
+              style={{ padding: '20px 22px', flex: barItems.length > 1 ? 1 : '0 0 340px', minWidth: 0 }}
+            >
+              <p className={styles.statLabel} style={{ marginBottom: 14 }}>{t('dashboard.chart.landUse')}</p>
+              <RabaDonutChart slices={donutSlices} />
+            </div>
+          )}
 
-        {barItems.length > 1 && (
-          <div className={styles.statCard} style={{ padding: '20px 22px', flex: 1, minWidth: 0 }}>
-            <p className={styles.statLabel} style={{ marginBottom: 14 }}>{t('dashboard.chart.comparison')}</p>
-            <ParcelaBarChart items={barItems} onClickItem={id => navigate(`/dashboard/${id}`)} />
-          </div>
-        )}
-      </div>
+          {barItems.length > 1 && (
+            <div className={styles.statCard} style={{ padding: '20px 22px', flex: 1, minWidth: 0 }}>
+              <p className={styles.statLabel} style={{ marginBottom: 14 }}>{t('dashboard.chart.comparison')}</p>
+              <ParcelaBarChart items={barItems} onClickItem={id => navigate(`/dashboard/${id}`)} />
+            </div>
+          )}
+        </div>
+      )}
 
-
-      <div className={styles.parceleGrid} style={{ marginTop: 20 }}>
+      <div className={styles.parceleGrid}>
         {parcele.length === 0 ? (
           <p className={styles.empty}>{t('dashboard.empty')}</p>
         ) : (

@@ -207,11 +207,8 @@ function RegionDashboardView() {
 
   return (
     <div className={styles.page}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 20 }}>
-        <div>
-          <p className={styles.detailEyebrow}>{t('region.eyebrow')}</p>
-          <h1 className={styles.title}>{selectedRegion?.name ?? t('region.title')}</h1>
-        </div>
+      <div className={styles.pageHeader}>
+        <h1 className={styles.title}>{selectedRegion?.name ?? t('region.title')}</h1>
 
         <select
           value={normalizedRegionCode}
@@ -219,16 +216,7 @@ function RegionDashboardView() {
             localStorage.setItem('lastRegion', event.target.value);
             navigate(`/regions/${event.target.value}`);
           }}
-          style={{
-            minWidth: 240,
-            height: 42,
-            border: '1px solid #dbe5df',
-            borderRadius: 8,
-            padding: '0 12px',
-            background: '#ffffff',
-            color: '#12382d',
-            fontWeight: 700,
-          }}
+          className={styles.regionSelect}
         >
           {regionOptions.map(region => (
             <option key={region.code} value={region.code}>{region.name}</option>
@@ -248,23 +236,28 @@ function RegionDashboardView() {
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: 16 }}>
-        {donutSlices.length > 0 && (
-          <div className={styles.statCard} style={{ padding: '20px 22px', flex: 1, minWidth: 0 }}>
-            <p className={styles.statLabel} style={{ marginBottom: 14 }}>{t('region.chart.landUse')}</p>
-            <RabaDonutChart slices={donutSlices} />
-          </div>
-        )}
+      {(donutSlices.length > 0 || barItems.length > 1) && (
+        <div style={{ display: 'flex', gap: 16 }}>
+          {donutSlices.length > 0 && (
+            <div
+              className={styles.statCard}
+              style={{ padding: '20px 22px', flex: barItems.length > 1 ? 1 : '0 0 340px', minWidth: 0 }}
+            >
+              <p className={styles.statLabel} style={{ marginBottom: 14 }}>{t('region.chart.landUse')}</p>
+              <RabaDonutChart slices={donutSlices} />
+            </div>
+          )}
 
-        {barItems.length > 1 && (
-          <div className={styles.statCard} style={{ padding: '20px 22px', flex: 1, minWidth: 0 }}>
-            <p className={styles.statLabel} style={{ marginBottom: 14 }}>{t('region.chart.comparison')}</p>
-            <ParcelaBarChart items={barItems} onClickItem={() => {}} />
-          </div>
-        )}
-      </div>
+          {barItems.length > 1 && (
+            <div className={styles.statCard} style={{ padding: '20px 22px', flex: 1, minWidth: 0 }}>
+              <p className={styles.statLabel} style={{ marginBottom: 14 }}>{t('region.chart.comparison')}</p>
+              <ParcelaBarChart items={barItems} onClickItem={() => {}} />
+            </div>
+          )}
+        </div>
+      )}
 
-      <section className={styles.chartPanel} style={{ marginTop: 0 }}>
+      <section className={styles.chartPanel}>
         <div className={styles.chartHeader}>
           <div>
             <p className={styles.chartTitle}>{t('region.chart.history')}</p>
@@ -276,8 +269,7 @@ function RegionDashboardView() {
         </div>
       </section>
 
-
-      <div className={styles.parceleGrid} style={{ marginTop: 0 }}>
+      <div className={styles.parceleGrid}>
         {loading ? (
           <p className={styles.empty}>{t('region.loading')}</p>
         ) : parcele.length === 0 ? (
