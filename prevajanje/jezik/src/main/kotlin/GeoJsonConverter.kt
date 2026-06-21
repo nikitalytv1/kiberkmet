@@ -181,7 +181,6 @@ class GeoJsonConverter(
         append(" }")
     }
 
-    // Simple Style Spec: https://github.com/mapbox/simplestyle-spec
     private fun styleFor(type: String): String = when (type) {
         "road"     -> """"fill": "#e67e22", "fill-opacity": 0.9, "stroke": "#ca6f1e", "stroke-width": 1"""
         "river"    -> """"fill": "#2980b9", "fill-opacity": 0.75, "stroke": "#1a5276", "stroke-width": 1"""
